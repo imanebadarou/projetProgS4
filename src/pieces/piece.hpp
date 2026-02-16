@@ -1,5 +1,6 @@
 #include <array>
 #include <vector>
+
 enum class Color { black, white };
 
 class Piece {
@@ -12,3 +13,5 @@ public:
   std::vector<std::array<int, 2>> getPosition();
   std::vector<std::array<int, 2>> getPossibleMoves();
 };
+
+
