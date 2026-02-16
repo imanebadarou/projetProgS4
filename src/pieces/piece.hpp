@@ -1,11 +1,10 @@
 #include <array>
 #include <vector>
-
 enum class Color { black, white };
 
 class Piece {
 private:
-  Color _color{Color::black};
+  const Color _color{};
   bool _hasMoved{false};
 
 public:
@@ -13,5 +12,3 @@ public:
   std::vector<std::array<int, 2>> getPosition();
   std::vector<std::array<int, 2>> getPossibleMoves();
 };
-
-
