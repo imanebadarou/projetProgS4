@@ -3,11 +3,12 @@
 enum class Color { black, white };
 
 class Piece {
-public:
+private:
   Color _color{Color::black};
   bool _hasMoved{false};
 
 public:
   void setHasMoved();
-  std::vector<std::array<int, 2>> whereCanIMove();
+  std::vector<std::array<int, 2>> getPosition();
+  std::vector<std::array<int, 2>> getPossibleMoves();
 };
