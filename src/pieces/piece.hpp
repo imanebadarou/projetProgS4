@@ -9,10 +9,16 @@ private:
   bool _hasMoved{false};
 
 protected:
+  // Constructeur 
   Piece(const Color color);
 
 public:
+  bool getHasMoved();
   void setHasMoved();
+
+  Color getColor();
+  void setColor();
+
   std::vector<std::array<int, 2>> whereCanIMove();
 };
 
