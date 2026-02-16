@@ -1,0 +1,3 @@
+class Bishop : public Piece {
+
+}
