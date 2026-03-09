@@ -1,6 +1,6 @@
+#pragma once
 #include <array>
 #include <vector>
-
 enum class Color { black, white };
 
 class Piece {
@@ -22,6 +22,6 @@ public:
   virtual std::vector<std::array<int, 2>> whereCanIMove() = 0;
 
   virtual ~Piece() = default;
+  std::vector<std::array<int, 2>> getPosition();
+  std::vector<std::array<int, 2>> getPossibleMoves();
 };
-
-
