@@ -19,7 +19,9 @@ public:
   Color getColor();
   void setColor();
 
-  std::vector<std::array<int, 2>> whereCanIMove();
+  virtual std::vector<std::array<int, 2>> whereCanIMove() = 0;
+
+  virtual ~Piece() = default;
 };
 
 
