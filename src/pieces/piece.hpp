@@ -1,10 +1,11 @@
+#pragma once
 #include <array>
 #include <vector>
 enum class Color { black, white };
 
 class Piece {
 private:
-  const Color _color{};
+  Color _color{};
   bool _hasMoved{false};
 
 protected:

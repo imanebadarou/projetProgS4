@@ -3,6 +3,6 @@
 #include <vector>
 
 class Bishop : public Piece {
-    public:
-        Bishop(const Color color);
+public:
+  Bishop(const Color color);
 };

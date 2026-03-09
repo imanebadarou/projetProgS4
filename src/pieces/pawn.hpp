@@ -3,6 +3,6 @@
 #include <vector>
 
 class Pawn : public Piece {
-    public:
-        Pawn(const Color color);
+public:
+  Pawn(const Color color);
 };

@@ -1,7 +1,5 @@
 #include "board.hpp"
 
-std::array<std::array<Piece, 8>, 8> _piecesPos;
-
 Board::Board() {
   // initialisation du plateau de jeu
   // création des cases vides
@@ -44,4 +42,17 @@ Board::Board() {
   // création du roi
   _piecesPos[1][5] = std::make_unique<King>(Color::white);
   _piecesPos[8][5] = std::make_unique<King>(Color::black);
+}
+
+std::vector<std::array<int, 2>> Board::getPiecesPos() {
+  std::vector<std::array<int, 2>> tabPiecesPos;
+
+  for (int i{0}; i < 8; i++) {
+    for (int j{0}; j < 8; j++) {
+      if (_piecesPos[i][j] != nullptr) {
+        tabPiecesPos.push_back({i, j});
+      }
+    }
+  }
+  return tabPiecesPos;
 }
