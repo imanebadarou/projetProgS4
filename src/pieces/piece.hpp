@@ -9,7 +9,7 @@ private:
   bool _hasMoved{false};
 
 protected:
-  // Constructeur 
+  // Constructeur
   Piece(const Color color);
 
 public:

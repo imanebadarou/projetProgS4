@@ -67,10 +67,4 @@ int main() {
   //       });
 
   Board board;
-  std::vector<std::array<int, 2>> tabPieces{board.getPiecesPos()};
-  for (std::array<int, 2> pieces : tabPieces) {
-    for (int piece : pieces) {
-      std::cout << piece;
-    }
-  }
 }
