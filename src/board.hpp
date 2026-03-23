@@ -16,5 +16,5 @@ private:
 
 public:
   Board();
-  std::unique_ptr<Piece> getPieceFromPos(coords coords);
+  Piece const *getPieceFromPos(coords coords);
 };
