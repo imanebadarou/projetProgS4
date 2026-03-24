@@ -22,7 +22,7 @@ public:
   Color getColor() const;
   void setColor();
 
-  virtual std::vector<std::array<int, 2>> whereCanIMove(const Board& board, coords position) = 0; //utiliser un std:fonction pour le board
+  virtual std::vector<std::array<int, 2>> whereCanIMove(const Board& board, coords position) const = 0;
 
   virtual ~Piece() = default;
 };

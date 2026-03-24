@@ -3,7 +3,7 @@
 
 King::King (const Color color): Piece(color){};
 
-std::vector<std::array<int, 2>> King::whereCanIMove(const Board& board, coords position) {
+std::vector<std::array<int, 2>> King::whereCanIMove(const Board& board, coords position) const {
     std::vector<std::array<int, 2>> moves;
     const int dx[] = {1, -1, 0, 0, 1, 1, -1, -1};
     const int dy[] = {0, 0, 1, -1, 1, -1, 1, -1};

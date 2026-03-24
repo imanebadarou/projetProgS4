@@ -3,7 +3,7 @@
 
 Rook::Rook (const Color color): Piece(color){};
 
-std::vector<std::array<int, 2>> Rook::whereCanIMove(const Board& board, coords position) {
+std::vector<std::array<int, 2>> Rook::whereCanIMove(const Board& board, coords position) const {
     std::vector<std::array<int, 2>> moves;
     const int dx[] = {1, -1, 0, 0};
     const int dy[] = {0, 0, 1, -1};

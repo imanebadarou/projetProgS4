@@ -3,7 +3,7 @@
 
 Pawn::Pawn (const Color color): Piece(color){};
 
-std::vector<std::array<int, 2>> Pawn::whereCanIMove(const Board& board, coords position) {
+std::vector<std::array<int, 2>> Pawn::whereCanIMove(const Board& board, coords position) const {
     std::vector<std::array<int, 2>> moves;
     int dir = (this->getColor() == Color::white) ? 1 : -1;
     
