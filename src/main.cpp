@@ -1,70 +1,120 @@
 #include "pieces/piece.hpp"
+#include "pieces/pawn.hpp"
+#include "pieces/rook.hpp"
+#include "pieces/knight.hpp"
+#include "pieces/bishop.hpp"
+#include "pieces/queen.hpp"
+#include "pieces/king.hpp"
 #include "quick_imgui/quick_imgui.hpp"
 #include <imgui.h>
 #include <iostream>
 #include <vector>
+#include <map>
+#include <string>
 
 #include "board.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include <glad/glad.h>
+
+GLuint loadTexture(const char* filepath) {
+    int width, height, channels;
+    unsigned char* data = stbi_load(filepath, &width, &height, &channels, 4);
+    if (!data) {
+        std::cerr << "Failed to load texture: " << filepath << std::endl;
+        return 0;
+    }
+
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    
+    stbi_image_free(data);
+    return texture;
+}
+
+std::string get_piece_name(Piece const* p) {
+    if (dynamic_cast<Pawn const*>(p)) return "pawn";
+    if (dynamic_cast<Rook const*>(p)) return "rook";
+    if (dynamic_cast<Knight const*>(p)) return "knight";
+    if (dynamic_cast<Bishop const*>(p)) return "bishop";
+    if (dynamic_cast<Queen const*>(p)) return "queen";
+    if (dynamic_cast<King const*>(p)) return "king";
+    return "";
+}
+
 int main() {
-  //   float value{0.f};
+    Board board;
+    std::map<std::string, GLuint> textures;
 
-  //   quick_imgui::loop(
-  //       "Chess",
-  //       {
-  //           .init = [&]() {},
-  //           .loop =
-  //               [&]() {
-  //                 ImGui::ShowDemoWindow(); // This opens a window which shows
-  //                 tons of examples of what you can do with ImGui.You should
-  //                 check it out !Also,you can use the "Item Picker" in the top
-  //                 menu of that demo window : then click on any widget and it
-  //                 will show you the corresponding code directly in your IDE !
+    quick_imgui::loop("Chess", {
+        .init = [&]() {
+            // Load all textures
+            std::vector<std::string> colors = {"white", "black"};
+            std::vector<std::string> names = {"pawn", "rook", "knight", "bishop", "queen", "king"};
+            for (const auto& color : colors) {
+                for (const auto& name : names) {
+                    std::string key = color + "-" + name;
+                    // Adjusted path to look two levels up since executable is in bin/Debug/
+                    std::string path = "../../assets/pieces/" + key + ".png";
+                    textures[key] = loadTexture(path.c_str());
+                }
+            }
+        },
+        .loop = [&]() {
+            ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-  //                       ImGui::Begin("Example");
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0)); // No margin
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0)); // No padding inside button
+            
+            // Draw from top (row 7 for black back rank) to bottom (row 0 for white back rank)
+            for (int x = 7; x >= 0; --x) {
+                for (int y = 0; y < 8; ++y) {
+                    ImGui::PushID(x * 8 + y);
+                    
+                    bool isBlackSquare = ((x + y) % 2 == 0);
+                    ImVec4 square_color = isBlackSquare ? ImVec4(0.46f, 0.58f, 0.33f, 1.0f) // Dark green-ish
+                                                        : ImVec4(0.93f, 0.93f, 0.82f, 1.0f); // Light cream
+                    
+                    ImGui::PushStyleColor(ImGuiCol_Button, square_color);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.8f, 0.4f, 1.f)); // Highlight
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.2f, 1.f));
+                    
+                    Piece const* p = board.getPieceFromPos({x, y});
+                    
+                    if (p) {
+                        std::string color_str = (p->getColor() == Color::white) ? "white" : "black";
+                        std::string key = color_str + "-" + get_piece_name(p);
+                        GLuint tex = textures[key];
+                        
+                        ImGui::ImageButton("##piece", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), 
+                                           ImVec2(0,0), ImVec2(1,1), square_color);
+                    } else {
+                        ImGui::Button("##empty", ImVec2(64, 64)); 
+                    }
+                    
+                    ImGui::PopStyleColor(3);
+                    
+                    if (y < 7) {
+                        ImGui::SameLine();
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::PopStyleVar(2);
 
-  //                 ImGui::SliderFloat("My Value", &value, 0.f, 3.f);
+            ImGui::End();
+        }
+    });
 
-  //                 if (ImGui::Button("1", ImVec2{50.f, 50.f}))
-  //                   std::cout << "Clicked button 1\n";
-  //                 ImGui::SameLine(); // Draw the next ImGui widget on the
-  //                 same line as the previous one.Otherwise it would be below
-  //                 it
-
-  //                     ImGui::PushStyleColor(
-  //                         ImGuiCol_Button,
-  //                         ImVec4{
-  //                             1.f, 0.f, 0.f,
-  //                             1.f}); // Changes the color of all buttons
-  //                             until we call ImGui::PopStyleColor().There is
-  //                             also ImGuiCol_ButtonActive and
-  //                             ImGuiCol_ButtonHovered
-
-  //                         ImGui::PushID(2); // When some ImGui items have the
-  //                         same label (for exemple the next two buttons are
-  //                         labeled "Yo") ImGui needs you to specify an ID so
-  //                         that it can distinguish them. It can be an int, a
-  //                         pointer, a string, etc.
-  //                                     // You will definitely run into this
-  //                                     when you create a button for each of
-  //                                     your chess pieces, so remember to give
-  //                                     them an ID!
-  //                   if (ImGui::Button("Yo", ImVec2{50.f, 50.f}))
-  //                       std::cout << "Clicked button 2\n";
-  //                   ImGui::PopID(); // Then pop the id you pushed after you
-  //                   created the widget
-
-  //                   ImGui::SameLine();
-  //                   ImGui::PushID(3);
-  //                   if (ImGui::Button("Yo", ImVec2{50.f, 50.f}))
-  //                     std::cout << "Clicked button 3\n";
-  //                   ImGui::PopID();
-
-  //                   ImGui::PopStyleColor();
-
-  //                   ImGui::End();
-  //               },
-  //       });
-
-  Board board;
+    return 0;
 }

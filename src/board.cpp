@@ -44,6 +44,6 @@ Board::Board() {
   _boardPos[7][4] = std::make_unique<King>(Color::black);
 }
 
-Piece const *Board::getPieceFromPos(coords coords) {
-  return _boardPos[coords.x][coords.y].get();
+Piece const *Board::getPieceFromPos(coords position) const {
+  return _boardPos[position.x][position.y].get();
 }
