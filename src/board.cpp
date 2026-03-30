@@ -50,4 +50,6 @@ Piece const *Board::getPieceFromPos(coords position) const {
 
 void Board::movePiece(coords from, coords to) {
   _boardPos[to.x][to.y] = std::move(_boardPos[from.x][from.y]);
+  _boardPos[to.x][to.y]->setHasMoved();
+  _boardPos[from.x][from.y] = nullptr;
 }
