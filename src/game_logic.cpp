@@ -6,7 +6,6 @@
 #include "pieces/queen.hpp"
 #include "pieces/rook.hpp"
 
-
 GameLogic::GameLogic() : current_turn(Color::white), winner(0) {}
 
 void GameLogic::checkGameState() {
@@ -22,21 +21,21 @@ void GameLogic::checkGameState() {
   }
 }
 
-std::string GameLogic::getPieceName(Piece const *p) const {
-  if (!p)
+std::string GameLogic::getPieceName(Piece const *piece) const {
+  if (!piece)
     return "";
 
-  if (dynamic_cast<Pawn const *>(p))
+  if (dynamic_cast<Pawn const *>(piece))
     return "pawn";
-  if (dynamic_cast<Rook const *>(p))
+  if (dynamic_cast<Rook const *>(piece))
     return "rook";
-  if (dynamic_cast<Knight const *>(p))
+  if (dynamic_cast<Knight const *>(piece))
     return "knight";
-  if (dynamic_cast<Bishop const *>(p))
+  if (dynamic_cast<Bishop const *>(piece))
     return "bishop";
-  if (dynamic_cast<Queen const *>(p))
+  if (dynamic_cast<Queen const *>(piece))
     return "queen";
-  if (dynamic_cast<King const *>(p))
+  if (dynamic_cast<King const *>(piece))
     return "king";
 
   return "";
@@ -45,8 +44,9 @@ std::string GameLogic::getPieceName(Piece const *p) const {
 bool GameLogic::hasKing(Color color) const {
   for (int i = 0; i < 8; ++i) {
     for (int j = 0; j < 8; ++j) {
-      Piece const *p = board.getPieceFromPos({i, j});
-      if (p && getPieceName(p) == "king" && p->getColor() == color) {
+      Piece const *piece = board.getPieceFromPos({i, j});
+      if (piece && getPieceName(piece) == "king" &&
+          piece->getColor() == color) {
         return true;
       }
     }
