@@ -47,3 +47,7 @@ Board::Board() {
 Piece const *Board::getPieceFromPos(coords position) const {
   return _boardPos[position.x][position.y].get();
 }
+
+void Board::movePiece(coords from, coords to) {
+  _boardPos[to.x][to.y] = std::move(_boardPos[from.x][from.y]);
+}

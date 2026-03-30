@@ -19,4 +19,5 @@ private:
 public:
   Board();
   Piece const *getPieceFromPos(coords position) const;
+  void movePiece(coords from, coords to);
 };

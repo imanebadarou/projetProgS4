@@ -58,6 +58,8 @@ int main() {
 
     std::vector<std::array<int, 2>> valid_moves;
     coords selected_piece{-1, -1};
+    Color current_turn = Color::white;
+    int winner = 0; // 0 = playing, 1 = white wins, 2 = black wins
 
     quick_imgui::loop("Chess", {
         .init = [&]() {
@@ -74,7 +76,26 @@ int main() {
             }
         },
         .loop = [&]() {
+            if (winner == 0) {
+                bool white_k = false, black_k = false;
+                for (int i=0; i<8; ++i) {
+                    for (int j=0; j<8; ++j) {
+                        Piece const* pcheck = board.getPieceFromPos({i, j});
+                        if (pcheck && get_piece_name(pcheck) == "king") {
+                            if (pcheck->getColor() == Color::white) white_k = true;
+                            else black_k = true;
+                        }
+                    }
+                }
+                if (!white_k) winner = 2; // Black wins
+                else if (!black_k) winner = 1; // White wins
+            }
+
             ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+            
+            std::string turn_text = (current_turn == Color::white) ? "White's Turn" : "Black's Turn";
+            ImGui::Text("%s", turn_text.c_str());
+            ImGui::Spacing();
 
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0)); // No margin
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0)); // No padding inside button
@@ -119,14 +140,40 @@ int main() {
                         
                         if (ImGui::ImageButton("##piece", (ImTextureID)(intptr_t)tex, ImVec2(64, 64), 
                                            ImVec2(0,0), ImVec2(1,1), square_color)) {
-                            selected_piece = {x, y};
-                            valid_moves = p->whereCanIMove(board, {x, y});
+                            if (winner == 0) {
+                                if (isValidMove) {
+                                    board.movePiece(selected_piece, {x, y});
+                                    selected_piece = {-1, -1};
+                                    valid_moves.clear();
+                                    current_turn = (current_turn == Color::white) ? Color::black : Color::white;
+                                } else if (p->getColor() == current_turn) {
+                                    selected_piece = {x, y};
+                                    valid_moves = p->whereCanIMove(board, {x, y});
+                                } else {
+                                    selected_piece = {-1, -1};
+                                    valid_moves.clear();
+                                }
+                            }
                         }
                     } else {
                         if (ImGui::Button("##empty", ImVec2(64, 64))) {
-                            selected_piece = {-1, -1};
-                            valid_moves.clear();
+                            if (winner == 0) {
+                                if (isValidMove) {
+                                    board.movePiece(selected_piece, {x, y});
+                                    selected_piece = {-1, -1};
+                                    valid_moves.clear();
+                                    current_turn = (current_turn == Color::white) ? Color::black : Color::white;
+                                } else {
+                                    selected_piece = {-1, -1};
+                                    valid_moves.clear();
+                                }
+                            }
                         }
+                    }
+
+                    if (ImGui::IsItemClicked(1)) { // Right click to deselect
+                        selected_piece = {-1, -1};
+                        valid_moves.clear();
                     }
                     
                     ImGui::PopStyleColor(3);
@@ -140,6 +187,25 @@ int main() {
             ImGui::PopStyleVar(2);
 
             ImGui::End();
+
+            if (winner != 0) {
+                ImGui::Begin("Game Over", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+                if (winner == 1) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.2f, 1.0f), "Congratulations, White Wins!");
+                } else {
+                    ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1.0f), "Congratulations, Black Wins!");
+                }
+                
+                ImGui::Spacing();
+                if (ImGui::Button("Play Again", ImVec2(120, 30))) {
+                    board = Board(); // Reset board
+                    valid_moves.clear();
+                    selected_piece = {-1, -1};
+                    current_turn = Color::white;
+                    winner = 0;
+                }
+                ImGui::End();
+            }
         }
     });
 
