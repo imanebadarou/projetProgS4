@@ -64,3 +64,7 @@ target_sources(ImGui PRIVATE lib/imgui/backends/imgui_impl_opengl3.cpp)
 # Link to ImGui
 target_link_libraries(quick_imgui PUBLIC ImGui)
 target_include_directories(quick_imgui SYSTEM PUBLIC lib)
+
+# ---Add glm---
+add_subdirectory(lib/glm)
+target_link_libraries(quick_imgui PUBLIC glm)
