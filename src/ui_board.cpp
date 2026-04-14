@@ -8,10 +8,6 @@ UIBoard::UIBoard(GameLogic &game, TextureManager &textures)
       promotion_color(Color::white) {}
 
 void UIBoard::render() {
-  if (!game.isGameOver()) {
-    game.checkGameState();
-  }
-
   ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
   std::string turn_text =
@@ -80,7 +76,7 @@ void UIBoard::renderSquare(int x, int y, bool isSelected, bool isValidMove) {
 
   if (p) {
     std::string color_str = (p->getColor() == Color::white) ? "white" : "black";
-    std::string key = color_str + "-" + game.getPieceName(p);
+    std::string key = color_str + "-" + GameLogic::getPieceName(p);
     GLuint tex = textures.getTexture(key);
 
     if (ImGui::ImageButton("##piece", (ImTextureID)(intptr_t)tex,
@@ -129,7 +125,7 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       piece_color = moving_piece->getColor();
     }
 
-    game.getBoard().movePiece(selected_piece, position);
+    game.makeMove(selected_piece, position);
     selected_piece = {-1, -1};
     valid_moves.clear();
 
@@ -138,9 +134,6 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       promotion_modal_open = true;
       promotion_pos = position;
       promotion_color = piece_color;
-    } else {
-      game.setCurrentTurn(game.getCurrentTurn() == Color::white ? Color::black
-                                                                : Color::white);
     }
   } else {
     Piece const *p = game.getBoard().getPieceFromPos(position);

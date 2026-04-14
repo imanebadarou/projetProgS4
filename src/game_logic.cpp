@@ -8,20 +8,21 @@
 
 GameLogic::GameLogic() : current_turn(Color::white), winner(0) {}
 
-void GameLogic::checkGameState() {
-  if (winner == 0) {
-    bool white_k = hasKing(Color::white);
-    bool black_k = hasKing(Color::black);
+bool GameLogic::makeMove(coords from, coords to) {
+  // Check if there's a piece at destination (capture)
+  Piece const *captured = board.getPieceFromPos(to);
+  checkKingCapture(captured);
 
-    if (!white_k) {
-      winner = 2; // Black wins
-    } else if (!black_k) {
-      winner = 1; // White wins
-    }
-  }
+  // Execute the move
+  board.movePiece(from, to);
+
+  // Switch turn
+  current_turn = (current_turn == Color::white) ? Color::black : Color::white;
+
+  return true; // Move successful
 }
 
-std::string GameLogic::getPieceName(Piece const *piece) const {
+std::string GameLogic::getPieceName(Piece const *piece) {
   if (!piece)
     return "";
 
@@ -41,17 +42,11 @@ std::string GameLogic::getPieceName(Piece const *piece) const {
   return "";
 }
 
-bool GameLogic::hasKing(Color color) const {
-  for (int i = 0; i < 8; ++i) {
-    for (int j = 0; j < 8; ++j) {
-      Piece const *piece = board.getPieceFromPos({i, j});
-      if (piece && dynamic_cast<King const *>(piece) &&
-          piece->getColor() == color) {
-        return true;
-      }
-    }
+void GameLogic::checkKingCapture(Piece const *captured) {
+  if (captured && dynamic_cast<King const *>(captured)) {
+    // King captured - game over
+    winner = (captured->getColor() == Color::white) ? 2 : 1;
   }
-  return false;
 }
 
 void GameLogic::resetGame() {
