@@ -48,9 +48,6 @@ void UIBoard::emitRaycastLocal(float local_x, float local_y, float width, float 
 }
 
 void UIBoard::render() {
-  if (!game.isGameOver()) {
-    game.checkGameState();
-  }
 
   // Draw 3D scene inside an ImGui Window
   if (show_3d) {
