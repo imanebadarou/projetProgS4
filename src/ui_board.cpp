@@ -223,6 +223,8 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       piece_color = moving_piece->getColor();
     }
 
+    scene3d.pushAnimation(selected_piece, position);
+
     game.getBoard().movePiece(selected_piece, position);
     selected_piece = {-1, -1};
     valid_moves.clear();

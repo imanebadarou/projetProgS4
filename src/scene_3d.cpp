@@ -1,5 +1,6 @@
 #include "scene_3d.hpp"
 #include <glm/gtc/type_ptr.hpp>
+#include <GLFW/glfw3.h>
 
 Scene3D::Scene3D() {}
 
@@ -106,6 +107,13 @@ void Scene3D::resize(int width, int height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void Scene3D::pushAnimation(coords from, coords to) {
+    currentAnim.active = true;
+    currentAnim.source = from;
+    currentAnim.target = to;
+    currentAnim.startTime = glfwGetTime();
+}
+
 GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, GameLogic& game, 
                                coords hoveredSquare, coords selectedSquare, const std::vector<std::array<int, 2>>& validMoves) {
     if (width <= 0 || height <= 0) return 0;
@@ -114,11 +122,6 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glViewport(0, 0, width, height);
-    
-    // Clear the FBO with a specific background color
-    glClearColor(0.2f, 0.2f, 0.25f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
 
     glUseProgram(shaderProgram);
 
@@ -128,14 +131,42 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
-    // Lumière adaptative en fonction du tour
-    glm::vec3 lightColor = (game.getCurrentTurn() == Color::white) ? glm::vec3(1.0f, 1.0f, 1.0f) : glm::vec3(0.3f, 0.3f, 0.7f);
-    glm::vec3 lightPos = glm::vec3(3.5f, 5.0f, 3.5f);
-    
-    glUniform3fv(glGetUniformLocation(shaderProgram, "lightColor"), 1, glm::value_ptr(lightColor));
-    glUniform3fv(glGetUniformLocation(shaderProgram, "lightPos"), 1, glm::value_ptr(lightPos));
     glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1, glm::value_ptr(camera.getPosition()));
+
+    // 1. Configurateur d'ambiance selon le tour
+    glm::vec3 dirLightDir, dirLightColor, pointLightColor;
+    float ambientStrength;
+    
+    if (game.getCurrentTurn() == Color::white) {
+        glClearColor(0.6f, 0.75f, 0.9f, 1.0f); // Ciel bleu
+        dirLightDir = glm::vec3(-0.5f, -1.0f, -0.3f);
+        dirLightColor = glm::vec3(1.0f, 0.95f, 0.9f); // Lumière jaune
+        ambientStrength = 0.5f;
+        pointLightColor = glm::vec3(1.0f, 0.8f, 0.2f);
+    } else {
+        glClearColor(1.0f, 0.8f, 0.9f, 1.0f); // Ciel rose
+        dirLightDir = glm::vec3(0.5f, -1.0f, 0.5f);
+        dirLightColor = glm::vec3(0.7f, 0.9f, 1.0f); // Lumière bleue
+        ambientStrength = 0.5f;
+        pointLightColor = glm::vec3(0.9f, 0.1f, 0.3f); // Rouge/Violet
+    }
+
+    // Effacement de l'écran avec la couleur calculée
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    // 2. Position de la lumière mobile flottante
+    float time = (float)glfwGetTime();
+    glm::vec3 pointLightPos = glm::vec3(3.5f + std::sin(time * 0.8f) * 4.0f, 
+                                        2.0f + std::sin(time * 2.0f) * 0.5f, 
+                                        3.5f + std::cos(time * 0.8f) * 4.0f);
+
+    glUniform3fv(glGetUniformLocation(shaderProgram, "dirLightDir"), 1, glm::value_ptr(dirLightDir));
+    glUniform3fv(glGetUniformLocation(shaderProgram, "dirLightColor"), 1, glm::value_ptr(dirLightColor));
+    glUniform1f(glGetUniformLocation(shaderProgram, "ambientStrength"), ambientStrength);
+
+    glUniform3fv(glGetUniformLocation(shaderProgram, "pointLightPos"), 1, glm::value_ptr(pointLightPos));
+    glUniform3fv(glGetUniformLocation(shaderProgram, "pointLightColor"), 1, glm::value_ptr(pointLightColor));
 
     glBindVertexArray(cubeVAO);
 
@@ -145,6 +176,7 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
             model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
             model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
             glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 0);
 
             glm::vec3 tileColor;
             bool isBlackSquare = ((x + z) % 2 == 0);
@@ -172,9 +204,41 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
             Piece const* p = game.getBoard().getPieceFromPos({x, z});
             if (p) {
+                glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 1);
+                glm::vec3 drawPos((float)x, 0.4f, (float)z);
+                
+                // Animation fluide si c'est la pièce visée
+                if (currentAnim.active && currentAnim.target.x == x && currentAnim.target.y == z) {
+                    double t = (glfwGetTime() - currentAnim.startTime) / currentAnim.duration;
+                    if (t >= 1.0) {
+                        currentAnim.active = false;
+                    } else {
+                        // Interpolation smoothstep
+                        float t_smooth = glm::smoothstep(0.0f, 1.0f, (float)t);
+                        float startX = (float)currentAnim.source.x;
+                        float startZ = (float)currentAnim.source.y;
+                        
+                        float curX = startX + ((float)x - startX) * t_smooth;
+                        float curZ = startZ + ((float)z - startZ) * t_smooth;
+                        
+                        // Sceau parabolique (hauteur dynamique)
+                        float jumpHeight = 1.0f;
+                        float curY = 0.4f + std::sin(t_smooth * glm::pi<float>()) * jumpHeight;
+                        
+                        drawPos = glm::vec3(curX, curY, curZ);
+                    }
+                }
+
                 glm::mat4 pieceModel = glm::mat4(1.0f);
-                pieceModel = glm::translate(pieceModel, glm::vec3((float)x, 0.4f, (float)z));
+                pieceModel = glm::translate(pieceModel, drawPos);
                 pieceModel = glm::scale(pieceModel, glm::vec3(0.6f, 0.8f, 0.6f));
+                
+                // Petite rotation d'animation
+                if (currentAnim.active && currentAnim.target.x == x && currentAnim.target.y == z) {
+                     float t_smooth = glm::smoothstep(0.0f, 1.0f, (float)((glfwGetTime() - currentAnim.startTime) / currentAnim.duration));
+                     pieceModel = glm::rotate(pieceModel, t_smooth * glm::pi<float>() * 2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+                }
+
                 glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(pieceModel));
 
                 glm::vec3 pieceColor = (p->getColor() == Color::white) ? glm::vec3(1.0f, 0.95f, 0.8f) : glm::vec3(0.1f, 0.1f, 0.1f);
