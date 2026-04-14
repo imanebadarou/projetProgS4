@@ -2,9 +2,10 @@
 #include <cstdint>
 #include <imgui.h>
 
-
 UIBoard::UIBoard(GameLogic &game, TextureManager &textures)
-    : game(game), textures(textures), selected_piece{-1, -1} {}
+    : game(game), textures(textures), selected_piece{-1, -1},
+      promotion_modal_open(false), promotion_pos{-1, -1},
+      promotion_color(Color::white) {}
 
 void UIBoard::render() {
   if (!game.isGameOver()) {
@@ -25,6 +26,8 @@ void UIBoard::render() {
   if (game.isGameOver()) {
     drawGameOverWindow();
   }
+
+  drawPromotionModal();
 }
 
 void UIBoard::drawBoardGrid() {
@@ -100,7 +103,7 @@ void UIBoard::renderSquare(int x, int y, bool isSelected, bool isValidMove) {
 }
 
 void UIBoard::handleSquareClick(coords position, bool isRightClick) {
-  if (game.isGameOver())
+  if (game.isGameOver() || promotion_modal_open)
     return;
 
   if (isRightClick) {
@@ -118,11 +121,27 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
   }
 
   if (isValidMove) {
+    Piece const *moving_piece = game.getBoard().getPieceFromPos(selected_piece);
+    bool is_pawn = false;
+    Color piece_color = Color::white;
+    if (moving_piece) {
+      is_pawn = (game.getPieceName(moving_piece) == "pawn");
+      piece_color = moving_piece->getColor();
+    }
+
     game.getBoard().movePiece(selected_piece, position);
     selected_piece = {-1, -1};
     valid_moves.clear();
-    game.setCurrentTurn(game.getCurrentTurn() == Color::white ? Color::black
-                                                              : Color::white);
+
+    if (is_pawn && ((piece_color == Color::white && position.x == 7) ||
+                    (piece_color == Color::black && position.x == 0))) {
+      promotion_modal_open = true;
+      promotion_pos = position;
+      promotion_color = piece_color;
+    } else {
+      game.setCurrentTurn(game.getCurrentTurn() == Color::white ? Color::black
+                                                                : Color::white);
+    }
   } else {
     Piece const *p = game.getBoard().getPieceFromPos(position);
     if (p && p->getColor() == game.getCurrentTurn()) {
@@ -151,6 +170,52 @@ void UIBoard::drawGameOverWindow() {
     game.resetGame();
     selected_piece = {-1, -1};
     valid_moves.clear();
+    promotion_modal_open = false;
   }
   ImGui::End();
+}
+
+void UIBoard::drawPromotionModal() {
+  if (promotion_modal_open && !ImGui::IsPopupOpen("Pawn Promotion")) {
+    ImGui::OpenPopup("Pawn Promotion");
+  }
+
+  if (ImGui::BeginPopupModal("Pawn Promotion", NULL,
+                             ImGuiWindowFlags_AlwaysAutoResize |
+                                 ImGuiWindowFlags_NoSavedSettings)) {
+    ImGui::Text("Choose a piece for promotion:");
+    ImGui::Spacing();
+
+    std::string color_str =
+        (promotion_color == Color::white) ? "white" : "black";
+    std::vector<std::string> pieces = {"queen", "rook", "bishop", "knight"};
+
+    std::string chosen_piece = "";
+
+    for (size_t i = 0; i < pieces.size(); ++i) {
+      std::string key = color_str + "-" + pieces[i];
+      GLuint tex = textures.getTexture(key);
+
+      ImGui::PushID(static_cast<int>(i));
+      if (ImGui::ImageButton("##promotion", (ImTextureID)(intptr_t)tex,
+                             ImVec2(64, 64))) {
+        chosen_piece = pieces[i];
+      }
+      ImGui::PopID();
+
+      if (i < pieces.size() - 1) {
+        ImGui::SameLine();
+      }
+    }
+
+    if (!chosen_piece.empty()) {
+      game.getBoard().promotePawn(promotion_pos, chosen_piece, promotion_color);
+      promotion_modal_open = false;
+      game.setCurrentTurn(game.getCurrentTurn() == Color::white ? Color::black
+                                                                : Color::white);
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+  }
 }

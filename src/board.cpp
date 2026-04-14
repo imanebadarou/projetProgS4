@@ -2,13 +2,6 @@
 
 Board::Board() {
   // initialisation du plateau de jeu
-  // création des cases vides
-  // for (int i{2}; i < 6; i++) {
-  //   for (int j{0}; j < 8; j++) {
-  //     _boardPos[i][j] = nullptr;
-  //   }
-  // }
-
   // création des pions blancs et noirs
   for (int j{0}; j < 8; j++) {
     _boardPos[1][j] = std::make_unique<Pawn>(Color::white);
@@ -52,4 +45,17 @@ void Board::movePiece(coords from, coords to) {
   _boardPos[to.x][to.y] = std::move(_boardPos[from.x][from.y]);
   _boardPos[to.x][to.y]->setHasMoved();
   _boardPos[from.x][from.y] = nullptr;
+}
+
+void Board::promotePawn(coords position, std::string const &pieceType,
+                        Color color) {
+  if (pieceType == "queen") {
+    _boardPos[position.x][position.y] = std::make_unique<Queen>(color);
+  } else if (pieceType == "rook") {
+    _boardPos[position.x][position.y] = std::make_unique<Rook>(color);
+  } else if (pieceType == "bishop") {
+    _boardPos[position.x][position.y] = std::make_unique<Bishop>(color);
+  } else if (pieceType == "knight") {
+    _boardPos[position.x][position.y] = std::make_unique<Knight>(color);
+  }
 }

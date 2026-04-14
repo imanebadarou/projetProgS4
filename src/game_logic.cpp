@@ -45,7 +45,7 @@ bool GameLogic::hasKing(Color color) const {
   for (int i = 0; i < 8; ++i) {
     for (int j = 0; j < 8; ++j) {
       Piece const *piece = board.getPieceFromPos({i, j});
-      if (piece && getPieceName(piece) == "king" &&
+      if (piece && dynamic_cast<King const *>(piece) &&
           piece->getColor() == color) {
         return true;
       }

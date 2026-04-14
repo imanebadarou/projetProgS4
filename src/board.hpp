@@ -9,6 +9,7 @@
 #include "utils.hpp"
 
 #include <memory>
+#include <string>
 
 class Piece;
 
@@ -20,4 +21,5 @@ public:
   Board();
   Piece const *getPieceFromPos(coords position) const;
   void movePiece(coords from, coords to);
+  void promotePawn(coords position, std::string const &pieceType, Color color);
 };
