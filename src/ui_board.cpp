@@ -1,27 +1,120 @@
 #include "ui_board.hpp"
 #include <cstdint>
 #include <imgui.h>
+#include <GLFW/glfw3.h> // For button constants
+#include <iostream>
 
 UIBoard::UIBoard(GameLogic &game, TextureManager &textures)
-    : game(game), textures(textures), selected_piece{-1, -1},
-      promotion_modal_open(false), promotion_pos{-1, -1},
-      promotion_color(Color::white) {}
+    : game(game), textures(textures) {}
+
+void UIBoard::init3D() {
+    scene3d.init();
+}
+
+void UIBoard::emitRaycastLocal(float local_x, float local_y, float width, float height) {
+    if (width <= 0 || height <= 0) return;
+
+    // Normalised Device Coordinates
+    float x = (2.0f * local_x) / width - 1.0f;
+    float y = 1.0f - (2.0f * local_y) / height;
+
+    float aspectRatio = width / height;
+    glm::mat4 proj = camera.getProjectionMatrix(aspectRatio);
+    glm::mat4 view = camera.getViewMatrix();
+
+    glm::vec4 ray_clip = glm::vec4(x, y, -1.0, 1.0);
+    glm::vec4 ray_eye = glm::inverse(proj) * ray_clip;
+    ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+
+    glm::vec3 ray_wor = glm::vec3(glm::inverse(view) * ray_eye);
+    ray_wor = glm::normalize(ray_wor);
+
+    glm::vec3 cam_pos = camera.getPosition();
+    
+    // Intersection with y=0 plane
+    if (std::abs(ray_wor.y) > 0.001f) {
+        float t = -cam_pos.y / ray_wor.y;
+        if (t > 0) {
+            glm::vec3 p = cam_pos + t * ray_wor;
+            int gridX = std::round(p.x);
+            int gridZ = std::round(p.z);
+            if (gridX >= 0 && gridX < 8 && gridZ >= 0 && gridZ < 8) {
+                hovered_piece = {gridX, gridZ};
+                return;
+            }
+        }
+    }
+    hovered_piece = {-1, -1};
+}
 
 void UIBoard::render() {
   if (!game.isGameOver()) {
     game.checkGameState();
   }
 
-  ImGui::Begin("Chess Board", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  // Draw 3D scene inside an ImGui Window
+  if (show_3d) {
+      ImGui::Begin("Vue 3D", &show_3d);
+      ImVec2 avail = ImGui::GetContentRegionAvail();
+      if (avail.x > 0 && avail.y > 0) {
+          GLuint tex = scene3d.renderToTexture(camera, avail.x, avail.y, game, hovered_piece, selected_piece, valid_moves);
+          
+          ImGui::Image((ImTextureID)(intptr_t)tex, avail, ImVec2(0, 1), ImVec2(1, 0));
+          
+          if (ImGui::IsItemHovered()) {
+              ImVec2 p0 = ImGui::GetItemRectMin();
+              ImVec2 mousePos = ImGui::GetMousePos();
+              
+              float local_x = mousePos.x - p0.x;
+              float local_y = mousePos.y - p0.y;
+              
+              emitRaycastLocal(local_x, local_y, avail.x, avail.y);
+              
+              if (ImGui::IsMouseClicked(0)) {
+                  if (hovered_piece.x != -1) handleSquareClick(hovered_piece, false);
+              } else if (ImGui::IsMouseClicked(1)) {
+                  handleSquareClick({-1, -1}, true);
+              }
+              
+              if (ImGui::IsMouseDragging(1)) {
+                  ImVec2 delta = ImGui::GetMouseDragDelta(1);
+                  camera.rotateTrackball(glm::radians(-delta.y * 0.5f), glm::radians(-delta.x * 0.5f));
+                  ImGui::ResetMouseDragDelta(1);
+              }
+              
+              float scroll = ImGui::GetIO().MouseWheel;
+              if (scroll != 0.0f) {
+                  camera.zoomTrackball(scroll * 0.5f);
+              }
+          } else {
+              hovered_piece = {-1, -1};
+          }
+      }
+      ImGui::End();
+  }
 
-  std::string turn_text =
-      (game.getCurrentTurn() == Color::white) ? "White's Turn" : "Black's Turn";
+  // Main UI Status / Settings Overlay
+  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+  ImGui::Begin("Chess View Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  std::string turn_text = (game.getCurrentTurn() == Color::white) ? "White's Turn" : "Black's Turn";
   ImGui::Text("%s", turn_text.c_str());
   ImGui::Spacing();
-
-  drawBoardGrid();
-
+  ImGui::Checkbox("Afficher vue 3D", &show_3d);
+  ImGui::Checkbox("Afficher vue 2D ImGui", &show_2d);
+  if (show_3d) {
+      ImGui::Spacing();
+      ImGui::Text("--- 3D Controls ---");
+      ImGui::Text("Right Click + Drag to rotate camera.");
+      ImGui::Text("Scroll to zoom.");
+  }
   ImGui::End();
+
+  // Show the 2D UI Board if enabled
+  if (show_2d) {
+      ImGui::Begin("Chess Board 2D", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+      drawBoardGrid();
+      ImGui::End();
+  }
 
   if (game.isGameOver()) {
     drawGameOverWindow();
@@ -101,6 +194,7 @@ void UIBoard::renderSquare(int x, int y, bool isSelected, bool isValidMove) {
   ImGui::PopStyleColor(3);
   ImGui::PopID();
 }
+
 
 void UIBoard::handleSquareClick(coords position, bool isRightClick) {
   if (game.isGameOver() || promotion_modal_open)
