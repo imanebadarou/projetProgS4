@@ -22,6 +22,7 @@ public:
                          const std::vector<std::array<int, 2>> &validMoves);
 
   void pushAnimation(coords from, coords to);
+  glm::vec3 getModelPos(int x, int z) const;
   bool isAnimationActive() const;
   bool getAnimatedWorldPositionFromSource(coords source,
                                           glm::vec3 &outWorldPos) const;

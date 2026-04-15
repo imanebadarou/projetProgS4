@@ -307,26 +307,16 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         continue;
       }
 
-      const bool isSelectedCarrier =
-          (x == selectedSquare.x && z == selectedSquare.y);
-      const bool isAnimatedCarrier = currentAnim.active &&
-                                     currentAnim.target.x == x &&
-                                     currentAnim.target.y == z;
-
-      if (camera.getMode() == CameraMode::FirstPerson &&
-          (isSelectedCarrier || isAnimatedCarrier)) {
-        continue;
-      }
-
       glm::vec3 drawPos((float)x, 0.4f, (float)z);
+      bool isAnimatingThisPiece = false;
       if (currentAnim.active && currentAnim.target.x == x &&
           currentAnim.target.y == z) {
-        double t =
-            (glfwGetTime() - currentAnim.startTime) / currentAnim.duration;
-        if (t >= 1.0) {
-          currentAnim.active = false;
+        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) / currentAnim.duration);
+        if (t >= 1.0f) {
+          // Animation terminée, mais on ne désactive pas ici car on est en plein milieu du rendu des instances
         } else {
-          float tSmooth = glm::smoothstep(0.0f, 1.0f, static_cast<float>(t));
+          isAnimatingThisPiece = true;
+          float tSmooth = glm::smoothstep(0.0f, 1.0f, t);
           float startX = static_cast<float>(currentAnim.source.x);
           float startZ = static_cast<float>(currentAnim.source.y);
           float curX = startX + ((float)x - startX) * tSmooth;
@@ -337,15 +327,22 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         }
       }
 
+      // Proximity hide : on cache la pièce si la caméra est "dedans" (mode pièce)
+      if (camera.getMode() == CameraMode::FirstPerson) {
+          glm::vec3 camPos = camera.getPosition();
+          float distSq = (drawPos.x - camPos.x) * (drawPos.x - camPos.x) + 
+                         (drawPos.z - camPos.z) * (drawPos.z - camPos.z);
+          if (distSq < 0.1f) {
+              continue;
+          }
+      }
+
       glm::mat4 pieceModel = glm::translate(glm::mat4(1.0f), drawPos);
       pieceModel = glm::scale(pieceModel, glm::vec3(0.6f, 0.8f, 0.6f));
 
-      if (currentAnim.active && currentAnim.target.x == x &&
-          currentAnim.target.y == z) {
-        float tSmooth = glm::smoothstep(
-            0.0f, 1.0f,
-            static_cast<float>((glfwGetTime() - currentAnim.startTime) /
-                               currentAnim.duration));
+      if (isAnimatingThisPiece) {
+        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) / currentAnim.duration);
+        float tSmooth = glm::smoothstep(0.0f, 1.0f, t);
         pieceModel = glm::rotate(pieceModel, tSmooth * glm::pi<float>() * 2.0f,
                                  glm::vec3(0.0f, 1.0f, 0.0f));
       }
@@ -362,6 +359,13 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
       pieceInstance.color = glm::vec4(pieceColor, 1.0f);
       pieceBatches[key].push_back(pieceInstance);
     }
+  }
+
+  // Désactivation propre de l'animation si elle est finie
+  if (currentAnim.active) {
+      if ((glfwGetTime() - currentAnim.startTime) / currentAnim.duration >= 1.0) {
+          currentAnim.active = false;
+      }
   }
 
   uploadInstances(boardInstances);

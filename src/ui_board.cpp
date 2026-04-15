@@ -15,18 +15,17 @@ void UIBoard::syncPieceViewCamera() {
     return;
   }
 
-  if (selected_piece.x == -1) {
-    if (scene3d.isAnimationActive() &&
-        camera.getMode() == CameraMode::FirstPerson) {
-      glm::vec3 animatedPiecePos;
-      if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor,
-                                                     animatedPiecePos)) {
-        // Conserver le même décalage vertical caméra/pièce pendant l'animation.
-        camera.setSubjectivePosition(animatedPiecePos +
-                                     glm::vec3(0.0f, 1.35f, 0.0f));
+  // Si une animation est en cours et concerne notre ancre ou notre sélection, on la suit
+  if (scene3d.isAnimationActive()) {
+      glm::vec3 animatedPos;
+      // On vérifie si la source de l'animation correspond à notre ancienne ancre
+      if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor, animatedPos)) {
+          camera.setSubjectivePosition(animatedPos + glm::vec3(0.0f, 1.35f, 0.0f));
+          return;
       }
-      return;
-    }
+  }
+
+  if (selected_piece.x == -1) {
     camera.setMode(CameraMode::Trackball);
     piece_view_anchor = {-1, -1};
     return;
@@ -40,14 +39,12 @@ void UIBoard::syncPieceViewCamera() {
   }
 
   const bool selectionChanged = piece_view_anchor.x != selected_piece.x ||
-                                piece_view_anchor.y != selected_piece.y;
+                                 piece_view_anchor.y != selected_piece.y;
 
   if (camera.getMode() != CameraMode::FirstPerson || selectionChanged) {
     const float yaw = (selected->getColor() == Color::white) ? 0.0f : 180.0f;
     const float pitch = -25.0f;
 
-    // Position de départ juste au-dessus de la pièce, orientée vers le camp
-    // adverse.
     camera.setSubjectivePosition(
         glm::vec3((float)selected_piece.x, 1.75f, (float)selected_piece.y));
     camera.setSubjectiveOrientation(yaw, pitch);
@@ -306,7 +303,15 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
     scene3d.pushAnimation(selected_piece, position);
 
     game.makeMove(selected_piece, position);
-    selected_piece = {-1, -1};
+    
+    // Si on est en "Vue Pièce", on veut rester attaché à la pièce qu'on vient de bouger.
+    // On met à jour selected_piece vers la destination au lieu de la reset à -1.
+    if (piece_view_enabled) {
+        selected_piece = position;
+    } else {
+        selected_piece = {-1, -1};
+    }
+    
     valid_moves.clear();
 
     if (is_pawn && ((piece_color == Color::white && position.x == 7) ||
