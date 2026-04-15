@@ -5,10 +5,9 @@
 #include "gl_utils.hpp"
 #include "utils.hpp"
 #include <array>
-#include <vector>
-#include <array>
 #include <map>
 #include <string>
+#include <vector>
 
 class Scene3D {
 public:
@@ -23,36 +22,40 @@ public:
                          const std::vector<std::array<int, 2>> &validMoves);
 
   void pushAnimation(coords from, coords to);
+  bool isAnimationActive() const;
+  bool getAnimatedWorldPositionFromSource(coords source,
+                                          glm::vec3 &outWorldPos) const;
 
 private:
-    struct AnimationState {
-        bool active{false};
-        coords source{-1, -1};
-        coords target{-1, -1};
-        double startTime{0.0};
-        double duration{0.5}; // 0.5 secondes
-    } currentAnim;
+  struct AnimationState {
+    bool active{false};
+    coords source{-1, -1};
+    coords target{-1, -1};
+    double startTime{0.0};
+    double duration{0.5}; // 0.5 secondes
+  } currentAnim;
 
-    struct GpuModel {
-        GLuint vao{0};
-        GLuint vbo{0};
-        int vertexCount{0};
-    };
+  struct GpuModel {
+    GLuint vao{0};
+    GLuint vbo{0};
+    int vertexCount{0};
+  };
 
-    struct Mesh {
-        GLuint vao{0}, vbo{0}, ebo{0};
-        int indexCount{0};
-    };
+  struct Mesh {
+    GLuint vao{0}, vbo{0}, ebo{0};
+    int indexCount{0};
+  };
 
-    GLuint shaderProgram{0};
-    Mesh cubeMesh;
-    std::map<std::string, GpuModel> pieceModels;
-    
-    void initMesh(Mesh& mesh, const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
-    void drawMesh(const Mesh& mesh);
-    
-    GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
-    int currentWidth{0}, currentHeight{0};
+  GLuint shaderProgram{0};
+  Mesh cubeMesh;
+  std::map<std::string, GpuModel> pieceModels;
+
+  void initMesh(Mesh &mesh, const std::vector<float> &vertices,
+                const std::vector<unsigned int> &indices);
+  void drawMesh(const Mesh &mesh);
+
+  GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
+  int currentWidth{0}, currentHeight{0};
 
   const std::string vertexShaderSrc = R"(
         #version 330 core

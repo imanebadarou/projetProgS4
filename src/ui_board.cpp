@@ -2,13 +2,59 @@
 #include <GLFW/glfw3.h> // For button constants
 #include <cstdint>
 #include <imgui.h>
-#include <iostream>
-
 
 UIBoard::UIBoard(GameLogic &game, TextureManager &textures)
     : game(game), textures(textures) {}
 
 void UIBoard::init3D() { scene3d.init(); }
+
+void UIBoard::syncPieceViewCamera() {
+  if (!piece_view_enabled) {
+    camera.setMode(CameraMode::Trackball);
+    piece_view_anchor = {-1, -1};
+    return;
+  }
+
+  if (selected_piece.x == -1) {
+    if (scene3d.isAnimationActive() &&
+        camera.getMode() == CameraMode::FirstPerson) {
+      glm::vec3 animatedPiecePos;
+      if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor,
+                                                     animatedPiecePos)) {
+        // Conserver le même décalage vertical caméra/pièce pendant l'animation.
+        camera.setSubjectivePosition(animatedPiecePos +
+                                     glm::vec3(0.0f, 1.35f, 0.0f));
+      }
+      return;
+    }
+    camera.setMode(CameraMode::Trackball);
+    piece_view_anchor = {-1, -1};
+    return;
+  }
+
+  Piece const *selected = game.getBoard().getPieceFromPos(selected_piece);
+  if (!selected) {
+    camera.setMode(CameraMode::Trackball);
+    piece_view_anchor = {-1, -1};
+    return;
+  }
+
+  const bool selectionChanged = piece_view_anchor.x != selected_piece.x ||
+                                piece_view_anchor.y != selected_piece.y;
+
+  if (camera.getMode() != CameraMode::FirstPerson || selectionChanged) {
+    const float yaw = (selected->getColor() == Color::white) ? 0.0f : 180.0f;
+    const float pitch = -25.0f;
+
+    // Position de départ juste au-dessus de la pièce, orientée vers le camp
+    // adverse.
+    camera.setSubjectivePosition(
+        glm::vec3((float)selected_piece.x, 1.75f, (float)selected_piece.y));
+    camera.setSubjectiveOrientation(yaw, pitch);
+    camera.setMode(CameraMode::FirstPerson);
+    piece_view_anchor = selected_piece;
+  }
+}
 
 void UIBoard::emitRaycastLocal(float local_x, float local_y, float width,
                                float height) {
@@ -55,13 +101,7 @@ void UIBoard::render() {
     ImGui::Begin("Vue 3D", &show_3d);
     ImVec2 avail = ImGui::GetContentRegionAvail();
     if (avail.x > 0 && avail.y > 0) {
-      // Mise à jour de la position subjective si on est en mode FirstPerson
-      if (camera.getMode() == CameraMode::FirstPerson) {
-          if (selected_piece.x != -1) {
-              // On place la caméra au sommet de la pièce (approx Y = 1.2f)
-              camera.setSubjectivePosition(glm::vec3((float)selected_piece.x, 1.2f, (float)selected_piece.y));
-          }
-      }
+      syncPieceViewCamera();
 
       GLuint tex =
           scene3d.renderToTexture(camera, avail.x, avail.y, game, hovered_piece,
@@ -82,7 +122,7 @@ void UIBoard::render() {
         if (ImGui::IsMouseClicked(0)) {
           if (hovered_piece.x != -1)
             handleSquareClick(hovered_piece, false);
-        } else if (ImGui::IsMouseClicked(1)) {
+        } else if (ImGui::IsMouseClicked(1) && !piece_view_enabled) {
           handleSquareClick({-1, -1}, true);
         }
 
@@ -123,24 +163,28 @@ void UIBoard::render() {
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Text("Mode de Caméra :");
-    int mode = (int)camera.getMode();
+    int mode = piece_view_enabled ? (int)CameraMode::FirstPerson
+                                  : (int)CameraMode::Trackball;
     if (ImGui::RadioButton("Trackball", mode == (int)CameraMode::Trackball)) {
-        camera.setMode(CameraMode::Trackball);
+      piece_view_enabled = false;
+      piece_view_anchor = {-1, -1};
+      camera.setMode(CameraMode::Trackball);
     }
     ImGui::SameLine();
     if (ImGui::RadioButton("Vue Pièce", mode == (int)CameraMode::FirstPerson)) {
-        camera.setMode(CameraMode::FirstPerson);
+      piece_view_enabled = true;
+      syncPieceViewCamera();
     }
-    
-    if (camera.getMode() == CameraMode::FirstPerson && selected_piece.x == -1) {
-        ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "Sélectionnez une pièce !");
+
+    if (piece_view_enabled && selected_piece.x == -1) {
+      ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "Sélectionnez une pièce !");
     }
 
     ImGui::Spacing();
     ImGui::Text("--- Contrôles 3D ---");
     ImGui::Text("Clic Droit + Drag : Rotation");
     if (camera.getMode() == CameraMode::Trackball) {
-        ImGui::Text("Molette : Zoom");
+      ImGui::Text("Molette : Zoom");
     }
   }
   ImGui::End();
@@ -238,6 +282,7 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
   if (isRightClick) {
     selected_piece = {-1, -1};
     valid_moves.clear();
+    syncPieceViewCamera();
     return;
   }
 
@@ -280,6 +325,8 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       valid_moves.clear();
     }
   }
+
+  syncPieceViewCamera();
 }
 
 void UIBoard::drawGameOverWindow() {

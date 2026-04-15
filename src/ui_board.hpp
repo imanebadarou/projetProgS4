@@ -1,11 +1,12 @@
 #pragma once
 
+#include "camera.hpp"
 #include "game_logic.hpp"
+#include "scene_3d.hpp"
 #include "texture_manager.hpp"
 #include <array>
 #include <vector>
-#include "scene_3d.hpp"
-#include "camera.hpp"
+
 
 class UIBoard {
 public:
@@ -38,12 +39,17 @@ private:
 
   int window_width{800}, window_height{800};
 
-  void emitRaycastLocal(float local_x, float local_y, float width, float height);
+  void emitRaycastLocal(float local_x, float local_y, float width,
+                        float height);
   void drawGameOverWindow();
   void drawPromotionModal();
-  
+
   bool show_2d{true};
   bool show_3d{true};
+  bool piece_view_enabled{false};
+  coords piece_view_anchor{-1, -1};
+
+  void syncPieceViewCamera();
 
   // L'ancienne grille 2D
   void drawBoardGrid();

@@ -1,25 +1,34 @@
 #include "scene_3d.hpp"
-#include <glm/gtc/type_ptr.hpp>
-#include <GLFW/glfw3.h>
 #include "obj_loader.hpp"
+#include <GLFW/glfw3.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
 Scene3D::Scene3D() {}
 
 Scene3D::~Scene3D() {
-    if (cubeMesh.vao) glDeleteVertexArrays(1, &cubeMesh.vao);
-    if (cubeMesh.vbo) glDeleteBuffers(1, &cubeMesh.vbo);
-    if (cubeMesh.ebo) glDeleteBuffers(1, &cubeMesh.ebo);
-    
-    for (auto& pair : pieceModels) {
-        if (pair.second.vao) glDeleteVertexArrays(1, &pair.second.vao);
-        if (pair.second.vbo) glDeleteBuffers(1, &pair.second.vbo);
-    }
+  if (cubeMesh.vao)
+    glDeleteVertexArrays(1, &cubeMesh.vao);
+  if (cubeMesh.vbo)
+    glDeleteBuffers(1, &cubeMesh.vbo);
+  if (cubeMesh.ebo)
+    glDeleteBuffers(1, &cubeMesh.ebo);
 
-    if (shaderProgram) glDeleteProgram(shaderProgram);
-    if (fbo) glDeleteFramebuffers(1, &fbo);
-    if (textureColorBuffer) glDeleteTextures(1, &textureColorBuffer);
-    if (rbo) glDeleteRenderbuffers(1, &rbo);
+  for (auto &pair : pieceModels) {
+    if (pair.second.vao)
+      glDeleteVertexArrays(1, &pair.second.vao);
+    if (pair.second.vbo)
+      glDeleteBuffers(1, &pair.second.vbo);
+  }
+
+  if (shaderProgram)
+    glDeleteProgram(shaderProgram);
+  if (fbo)
+    glDeleteFramebuffers(1, &fbo);
+  if (textureColorBuffer)
+    glDeleteTextures(1, &textureColorBuffer);
+  if (rbo)
+    glDeleteRenderbuffers(1, &rbo);
 }
 
 void Scene3D::init() {
@@ -60,39 +69,44 @@ void Scene3D::init() {
 
   initMesh(cubeMesh, vertices, indices);
 
-    // Chargement propre de tous les modèles 3D des pièces
-    std::vector<std::string> colors = {"white", "black"};
-    std::vector<std::string> names = {"pawn", "rook", "knight", "bishop", "queen", "king"};
-    
-    for (const auto& color : colors) {
-        for (const auto& name : names) {
-            std::string key = color + "-" + name;
-            std::string path = "../../assets/3Dmodels/" + key + ".obj";
-            
-            ModelData data = loadOBJ(path);
-            if (data.vertexCount > 0) {
-                GpuModel gpu;
-                gpu.vertexCount = data.vertexCount;
-                
-                glGenVertexArrays(1, &gpu.vao);
-                glGenBuffers(1, &gpu.vbo);
-                
-                glBindVertexArray(gpu.vao);
-                glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-                glBufferData(GL_ARRAY_BUFFER, data.vertices.size() * sizeof(float), data.vertices.data(), GL_STATIC_DRAW);
-                
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-                glEnableVertexAttribArray(0);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-                glEnableVertexAttribArray(1);
-                
-                pieceModels[key] = gpu;
-                // std::cout << "Successfully loaded: " << path << " (" << data.vertexCount << " vertices)" << std::endl;
-            } else {
-                std::cerr << "Failed to load model: " << path << std::endl;
-            }
-        }
+  // Chargement propre de tous les modèles 3D des pièces
+  std::vector<std::string> colors = {"white", "black"};
+  std::vector<std::string> names = {"pawn",   "rook",  "knight",
+                                    "bishop", "queen", "king"};
+
+  for (const auto &color : colors) {
+    for (const auto &name : names) {
+      std::string key = color + "-" + name;
+      std::string path = "../../assets/3Dmodels/" + key + ".obj";
+
+      ModelData data = loadOBJ(path);
+      if (data.vertexCount > 0) {
+        GpuModel gpu;
+        gpu.vertexCount = data.vertexCount;
+
+        glGenVertexArrays(1, &gpu.vao);
+        glGenBuffers(1, &gpu.vbo);
+
+        glBindVertexArray(gpu.vao);
+        glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+        glBufferData(GL_ARRAY_BUFFER, data.vertices.size() * sizeof(float),
+                     data.vertices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                              (void *)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                              (void *)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+
+        pieceModels[key] = gpu;
+        // std::cout << "Successfully loaded: " << path << " (" <<
+        // data.vertexCount << " vertices)" << std::endl;
+      } else {
+        std::cerr << "Failed to load model: " << path << std::endl;
+      }
     }
+  }
 }
 
 void Scene3D::resize(int width, int height) {
@@ -135,6 +149,36 @@ void Scene3D::pushAnimation(coords from, coords to) {
   currentAnim.source = from;
   currentAnim.target = to;
   currentAnim.startTime = glfwGetTime();
+}
+
+bool Scene3D::isAnimationActive() const { return currentAnim.active; }
+
+bool Scene3D::getAnimatedWorldPositionFromSource(coords source,
+                                                 glm::vec3 &outWorldPos) const {
+  if (!currentAnim.active)
+    return false;
+
+  if (currentAnim.source.x != source.x || currentAnim.source.y != source.y)
+    return false;
+
+  float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) /
+                               currentAnim.duration);
+  t = glm::clamp(t, 0.0f, 1.0f);
+  const float tSmooth = glm::smoothstep(0.0f, 1.0f, t);
+
+  const float startX = static_cast<float>(currentAnim.source.x);
+  const float startZ = static_cast<float>(currentAnim.source.y);
+  const float targetX = static_cast<float>(currentAnim.target.x);
+  const float targetZ = static_cast<float>(currentAnim.target.y);
+
+  const float curX = startX + (targetX - startX) * tSmooth;
+  const float curZ = startZ + (targetZ - startZ) * tSmooth;
+
+  const float jumpHeight = 1.0f;
+  const float curY = 0.4f + std::sin(tSmooth * glm::pi<float>()) * jumpHeight;
+
+  outWorldPos = glm::vec3(curX, curY, curZ);
+  return true;
 }
 
 GLuint
@@ -203,13 +247,14 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   glUniform3fv(glGetUniformLocation(shaderProgram, "pointLightColor"), 1,
                glm::value_ptr(pointLightColor));
 
-    for (int x = 0; x < 8; ++x) {
-        for (int z = 0; z < 8; ++z) {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
-            model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
-            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 0);
+  for (int x = 0; x < 8; ++x) {
+    for (int z = 0; z < 8; ++z) {
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
+      model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
+      glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
+                         GL_FALSE, glm::value_ptr(model));
+      glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 0);
 
       glm::vec3 tileColor;
       bool isBlackSquare = ((x + z) % 2 == 0);
@@ -286,27 +331,32 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
                            GL_FALSE, glm::value_ptr(pieceModel));
 
-                // Si on est en mode FirstPerson sur cette pièce, on ne l'affiche pas 
-                // pour ne pas voir "l'intérieur" du modèle 3D.
-                if (camera.getMode() == CameraMode::FirstPerson && x == selectedSquare.x && z == selectedSquare.y) {
-                    continue;
-                }
-
-                glm::vec3 pieceColor = (p->getColor() == Color::white) ? glm::vec3(1.0f, 0.95f, 0.8f) : glm::vec3(0.1f, 0.1f, 0.1f);
-                glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, glm::value_ptr(pieceColor));
-                
-                std::string colorStr = (p->getColor() == Color::white) ? "white-" : "black-";
-                std::string key = colorStr + GameLogic::getPieceName(p);
-                
-                if (pieceModels.count(key)) {
-                    glBindVertexArray(pieceModels[key].vao);
-                    glDrawArrays(GL_TRIANGLES, 0, pieceModels[key].vertexCount);
-                } else {
-                    drawMesh(cubeMesh);
-                }
-            }
+        // Si on est en mode FirstPerson sur cette pièce, on ne l'affiche pas
+        // pour ne pas voir "l'intérieur" du modèle 3D.
+        if (camera.getMode() == CameraMode::FirstPerson &&
+            x == selectedSquare.x && z == selectedSquare.y) {
+          continue;
         }
+
+        glm::vec3 pieceColor = (p->getColor() == Color::white)
+                                   ? glm::vec3(1.0f, 0.95f, 0.8f)
+                                   : glm::vec3(0.1f, 0.1f, 0.1f);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1,
+                     glm::value_ptr(pieceColor));
+
+        std::string colorStr =
+            (p->getColor() == Color::white) ? "white-" : "black-";
+        std::string key = colorStr + GameLogic::getPieceName(p);
+
+        if (pieceModels.count(key)) {
+          glBindVertexArray(pieceModels[key].vao);
+          glDrawArrays(GL_TRIANGLES, 0, pieceModels[key].vertexCount);
+        } else {
+          drawMesh(cubeMesh);
+        }
+      }
     }
+  }
 
   glBindVertexArray(0);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -314,30 +364,34 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   return textureColorBuffer;
 }
 
-void Scene3D::initMesh(Mesh& mesh, const std::vector<float>& vertices, const std::vector<unsigned int>& indices) {
-    glGenVertexArrays(1, &mesh.vao);
-    glGenBuffers(1, &mesh.vbo);
-    glGenBuffers(1, &mesh.ebo);
+void Scene3D::initMesh(Mesh &mesh, const std::vector<float> &vertices,
+                       const std::vector<unsigned int> &indices) {
+  glGenVertexArrays(1, &mesh.vao);
+  glGenBuffers(1, &mesh.vbo);
+  glGenBuffers(1, &mesh.ebo);
 
-    glBindVertexArray(mesh.vao);
+  glBindVertexArray(mesh.vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
+               vertices.data(), GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+               indices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
-    mesh.indexCount = indices.size();
-    glBindVertexArray(0);
+  mesh.indexCount = indices.size();
+  glBindVertexArray(0);
 }
 
-void Scene3D::drawMesh(const Mesh& mesh) {
-    glBindVertexArray(mesh.vao);
-    glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+void Scene3D::drawMesh(const Mesh &mesh) {
+  glBindVertexArray(mesh.vao);
+  glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
 }
