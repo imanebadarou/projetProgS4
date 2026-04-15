@@ -4,6 +4,7 @@
 #include "game_logic.hpp"
 #include "gl_utils.hpp"
 #include "utils.hpp"
+#include <array>
 #include <vector>
 #include <array>
 #include <map>
@@ -11,15 +12,17 @@
 
 class Scene3D {
 public:
-    Scene3D();
-    ~Scene3D();
+  Scene3D();
+  ~Scene3D();
 
-    void init();
-    void resize(int width, int height);
-    GLuint renderToTexture(const Camera& camera, int width, int height, GameLogic& game, 
-                           coords hoveredSquare, coords selectedSquare, const std::vector<std::array<int, 2>>& validMoves);
+  void init();
+  void resize(int width, int height);
+  GLuint renderToTexture(const Camera &camera, int width, int height,
+                         GameLogic &game, coords hoveredSquare,
+                         coords selectedSquare,
+                         const std::vector<std::array<int, 2>> &validMoves);
 
-    void pushAnimation(coords from, coords to);
+  void pushAnimation(coords from, coords to);
 
 private:
     struct AnimationState {
@@ -43,7 +46,7 @@ private:
     GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
     int currentWidth{0}, currentHeight{0};
 
-    const std::string vertexShaderSrc = R"(
+  const std::string vertexShaderSrc = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
@@ -65,7 +68,7 @@ private:
         }
     )";
 
-    const std::string fragmentShaderSrc = R"(
+  const std::string fragmentShaderSrc = R"(
         #version 330 core
         out vec4 FragColor;
 
