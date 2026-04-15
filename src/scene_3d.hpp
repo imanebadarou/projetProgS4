@@ -4,36 +4,50 @@
 #include "game_logic.hpp"
 #include "gl_utils.hpp"
 #include "utils.hpp"
-#include <vector>
 #include <array>
+#include <vector>
 
 class Scene3D {
 public:
-    Scene3D();
-    ~Scene3D();
+  Scene3D();
+  ~Scene3D();
 
-    void init();
-    void resize(int width, int height);
-    GLuint renderToTexture(const Camera& camera, int width, int height, GameLogic& game, 
-                           coords hoveredSquare, coords selectedSquare, const std::vector<std::array<int, 2>>& validMoves);
+  void init();
+  void resize(int width, int height);
+  GLuint renderToTexture(const Camera &camera, int width, int height,
+                         GameLogic &game, coords hoveredSquare,
+                         coords selectedSquare,
+                         const std::vector<std::array<int, 2>> &validMoves);
 
-    void pushAnimation(coords from, coords to);
+  void pushAnimation(coords from, coords to);
 
 private:
-    struct AnimationState {
-        bool active{false};
-        coords source{-1, -1};
-        coords target{-1, -1};
-        double startTime{0.0};
-        double duration{0.5}; // 0.5 secondes
-    } currentAnim;
+  struct MeshBuffers {
+    GLuint vao{0};
+    GLuint vbo{0};
+    GLuint ebo{0};
+    GLsizei indexCount{0};
+  };
 
-    GLuint shaderProgram{0};
-    GLuint cubeVAO{0}, cubeVBO{0};
-    GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
-    int currentWidth{0}, currentHeight{0};
+  void initMesh(MeshBuffers &mesh, const std::vector<float> &vertices,
+                const std::vector<unsigned int> &indices);
+  void destroyMesh(MeshBuffers &mesh);
+  void drawMesh(const MeshBuffers &mesh) const;
 
-    const std::string vertexShaderSrc = R"(
+  struct AnimationState {
+    bool active{false};
+    coords source{-1, -1};
+    coords target{-1, -1};
+    double startTime{0.0};
+    double duration{0.5}; // 0.5 secondes
+  } currentAnim;
+
+  GLuint shaderProgram{0};
+  MeshBuffers cubeMesh{};
+  GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
+  int currentWidth{0}, currentHeight{0};
+
+  const std::string vertexShaderSrc = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
         layout (location = 1) in vec3 aNormal;
@@ -55,7 +69,7 @@ private:
         }
     )";
 
-    const std::string fragmentShaderSrc = R"(
+  const std::string fragmentShaderSrc = R"(
         #version 330 core
         out vec4 FragColor;
 
