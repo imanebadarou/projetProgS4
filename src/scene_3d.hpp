@@ -6,6 +6,8 @@
 #include "utils.hpp"
 #include <vector>
 #include <array>
+#include <map>
+#include <string>
 
 class Scene3D {
 public:
@@ -28,8 +30,16 @@ private:
         double duration{0.5}; // 0.5 secondes
     } currentAnim;
 
+    struct GpuModel {
+        GLuint vao{0};
+        GLuint vbo{0};
+        int vertexCount{0};
+    };
+
     GLuint shaderProgram{0};
     GLuint cubeVAO{0}, cubeVBO{0};
+    std::map<std::string, GpuModel> pieceModels;
+    
     GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
     int currentWidth{0}, currentHeight{0};
 

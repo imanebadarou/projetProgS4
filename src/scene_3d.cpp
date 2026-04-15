@@ -1,12 +1,20 @@
 #include "scene_3d.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
+#include "obj_loader.hpp"
+#include <iostream>
 
 Scene3D::Scene3D() {}
 
 Scene3D::~Scene3D() {
     if (cubeVAO) glDeleteVertexArrays(1, &cubeVAO);
     if (cubeVBO) glDeleteBuffers(1, &cubeVBO);
+    
+    for (auto& pair : pieceModels) {
+        if (pair.second.vao) glDeleteVertexArrays(1, &pair.second.vao);
+        if (pair.second.vbo) glDeleteBuffers(1, &pair.second.vbo);
+    }
+
     if (shaderProgram) glDeleteProgram(shaderProgram);
     if (fbo) glDeleteFramebuffers(1, &fbo);
     if (textureColorBuffer) glDeleteTextures(1, &textureColorBuffer);
@@ -77,6 +85,40 @@ void Scene3D::init() {
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // Chargement propre de tous les modèles 3D des pièces
+    std::vector<std::string> colors = {"white", "black"};
+    std::vector<std::string> names = {"pawn", "rook", "knight", "bishop", "queen", "king"};
+    
+    for (const auto& color : colors) {
+        for (const auto& name : names) {
+            std::string key = color + "-" + name;
+            std::string path = "../../assets/3Dmodels/" + key + ".obj";
+            
+            ModelData data = loadOBJ(path);
+            if (data.vertexCount > 0) {
+                GpuModel gpu;
+                gpu.vertexCount = data.vertexCount;
+                
+                glGenVertexArrays(1, &gpu.vao);
+                glGenBuffers(1, &gpu.vbo);
+                
+                glBindVertexArray(gpu.vao);
+                glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+                glBufferData(GL_ARRAY_BUFFER, data.vertices.size() * sizeof(float), data.vertices.data(), GL_STATIC_DRAW);
+                
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+                glEnableVertexAttribArray(1);
+                
+                pieceModels[key] = gpu;
+                // std::cout << "Successfully loaded: " << path << " (" << data.vertexCount << " vertices)" << std::endl;
+            } else {
+                std::cerr << "Failed to load model: " << path << std::endl;
+            }
+        }
+    }
 }
 
 void Scene3D::resize(int width, int height) {
@@ -172,6 +214,7 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
     for (int x = 0; x < 8; ++x) {
         for (int z = 0; z < 8; ++z) {
+            glBindVertexArray(cubeVAO);
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
             model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
@@ -243,7 +286,17 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
                 glm::vec3 pieceColor = (p->getColor() == Color::white) ? glm::vec3(1.0f, 0.95f, 0.8f) : glm::vec3(0.1f, 0.1f, 0.1f);
                 glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, glm::value_ptr(pieceColor));
-                glDrawArrays(GL_TRIANGLES, 0, 36);
+                
+                std::string colorStr = (p->getColor() == Color::white) ? "white-" : "black-";
+                std::string key = colorStr + GameLogic::getPieceName(p);
+                
+                if (pieceModels.count(key)) {
+                    glBindVertexArray(pieceModels[key].vao);
+                    glDrawArrays(GL_TRIANGLES, 0, pieceModels[key].vertexCount);
+                } else {
+                    glBindVertexArray(cubeVAO);
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
             }
         }
     }
