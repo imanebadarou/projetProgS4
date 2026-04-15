@@ -32,7 +32,25 @@ Scene3D::~Scene3D() {
 }
 
 void Scene3D::init() {
-  shaderProgram = createProgram(vertexShaderSrc, fragmentShaderSrc);
+  shaderProgram = createProgramFromFiles(vertexShaderPath, fragmentShaderPath);
+  if (shaderProgram == 0) {
+    std::cerr << "Impossible de creer le shader program 3D." << std::endl;
+    return;
+  }
+
+  uniforms.model = glGetUniformLocation(shaderProgram, "model");
+  uniforms.view = glGetUniformLocation(shaderProgram, "view");
+  uniforms.projection = glGetUniformLocation(shaderProgram, "projection");
+  uniforms.color = glGetUniformLocation(shaderProgram, "color");
+  uniforms.viewPos = glGetUniformLocation(shaderProgram, "viewPos");
+  uniforms.dirLightDir = glGetUniformLocation(shaderProgram, "dirLightDir");
+  uniforms.dirLightColor = glGetUniformLocation(shaderProgram, "dirLightColor");
+  uniforms.ambientStrength =
+      glGetUniformLocation(shaderProgram, "ambientStrength");
+  uniforms.pointLightPos = glGetUniformLocation(shaderProgram, "pointLightPos");
+  uniforms.pointLightColor =
+      glGetUniformLocation(shaderProgram, "pointLightColor");
+  uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
 
   const std::vector<float> vertices = {
       // positions          // normals
@@ -186,7 +204,7 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                          GameLogic &game, coords hoveredSquare,
                          coords selectedSquare,
                          const std::vector<std::array<int, 2>> &validMoves) {
-  if (width <= 0 || height <= 0)
+  if (width <= 0 || height <= 0 || shaderProgram == 0)
     return 0;
 
   resize(width, height);
@@ -200,12 +218,10 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   glm::mat4 projection = camera.getProjectionMatrix(aspectRatio);
   glm::mat4 view = camera.getViewMatrix();
 
-  glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1,
-                     GL_FALSE, glm::value_ptr(projection));
-  glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE,
-                     glm::value_ptr(view));
-  glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1,
-               glm::value_ptr(camera.getPosition()));
+  glUniformMatrix4fv(uniforms.projection, 1, GL_FALSE,
+                     glm::value_ptr(projection));
+  glUniformMatrix4fv(uniforms.view, 1, GL_FALSE, glm::value_ptr(view));
+  glUniform3fv(uniforms.viewPos, 1, glm::value_ptr(camera.getPosition()));
 
   // 1. Configurateur d'ambiance selon le tour
   glm::vec3 dirLightDir, dirLightColor, pointLightColor;
@@ -235,37 +251,32 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                                       2.0f + std::sin(time * 2.0f) * 0.5f,
                                       3.5f + std::cos(time * 0.8f) * 4.0f);
 
-  glUniform3fv(glGetUniformLocation(shaderProgram, "dirLightDir"), 1,
-               glm::value_ptr(dirLightDir));
-  glUniform3fv(glGetUniformLocation(shaderProgram, "dirLightColor"), 1,
-               glm::value_ptr(dirLightColor));
-  glUniform1f(glGetUniformLocation(shaderProgram, "ambientStrength"),
-              ambientStrength);
+  glUniform3fv(uniforms.dirLightDir, 1, glm::value_ptr(dirLightDir));
+  glUniform3fv(uniforms.dirLightColor, 1, glm::value_ptr(dirLightColor));
+  glUniform1f(uniforms.ambientStrength, ambientStrength);
 
-  glUniform3fv(glGetUniformLocation(shaderProgram, "pointLightPos"), 1,
-               glm::value_ptr(pointLightPos));
-  glUniform3fv(glGetUniformLocation(shaderProgram, "pointLightColor"), 1,
-               glm::value_ptr(pointLightColor));
+  glUniform3fv(uniforms.pointLightPos, 1, glm::value_ptr(pointLightPos));
+  glUniform3fv(uniforms.pointLightColor, 1, glm::value_ptr(pointLightColor));
+
+  bool validMoveMask[8][8] = {};
+  for (const auto &move : validMoves) {
+    if (move[0] >= 0 && move[0] < 8 && move[1] >= 0 && move[1] < 8) {
+      validMoveMask[move[0]][move[1]] = true;
+    }
+  }
 
   for (int x = 0; x < 8; ++x) {
     for (int z = 0; z < 8; ++z) {
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
       model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
-      glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
-                         GL_FALSE, glm::value_ptr(model));
-      glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 0);
+      glUniformMatrix4fv(uniforms.model, 1, GL_FALSE, glm::value_ptr(model));
+      glUniform1i(uniforms.isPiece, 0);
 
       glm::vec3 tileColor;
       bool isBlackSquare = ((x + z) % 2 == 0);
 
-      bool isValidMove = false;
-      for (const auto &move : validMoves) {
-        if (move[0] == x && move[1] == z) {
-          isValidMove = true;
-          break;
-        }
-      }
+      const bool isValidMove = validMoveMask[x][z];
 
       if (selectedSquare.x == x && selectedSquare.y == z) {
         tileColor = glm::vec3(0.8f, 0.8f, 0.2f);
@@ -278,13 +289,12 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                                   : glm::vec3(0.9f, 0.9f, 0.9f);
       }
 
-      glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1,
-                   glm::value_ptr(tileColor));
+      glUniform3fv(uniforms.color, 1, glm::value_ptr(tileColor));
       drawMesh(cubeMesh);
 
       Piece const *p = game.getBoard().getPieceFromPos({x, z});
       if (p) {
-        glUniform1i(glGetUniformLocation(shaderProgram, "isPiece"), 1);
+        glUniform1i(uniforms.isPiece, 1);
         glm::vec3 drawPos((float)x, 0.4f, (float)z);
 
         // Animation fluide si c'est la pièce visée
@@ -328,8 +338,8 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                           glm::vec3(0.0f, 1.0f, 0.0f));
         }
 
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
-                           GL_FALSE, glm::value_ptr(pieceModel));
+        glUniformMatrix4fv(uniforms.model, 1, GL_FALSE,
+                           glm::value_ptr(pieceModel));
 
         // En FirstPerson, on masque la pièce portée par la caméra :
         // - pièce sélectionnée immobile
@@ -348,16 +358,16 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         glm::vec3 pieceColor = (p->getColor() == Color::white)
                                    ? glm::vec3(1.0f, 0.95f, 0.8f)
                                    : glm::vec3(0.1f, 0.1f, 0.1f);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1,
-                     glm::value_ptr(pieceColor));
+        glUniform3fv(uniforms.color, 1, glm::value_ptr(pieceColor));
 
         std::string colorStr =
             (p->getColor() == Color::white) ? "white-" : "black-";
         std::string key = colorStr + GameLogic::getPieceName(p);
 
-        if (pieceModels.count(key)) {
-          glBindVertexArray(pieceModels[key].vao);
-          glDrawArrays(GL_TRIANGLES, 0, pieceModels[key].vertexCount);
+        auto modelIt = pieceModels.find(key);
+        if (modelIt != pieceModels.end()) {
+          glBindVertexArray(modelIt->second.vao);
+          glDrawArrays(GL_TRIANGLES, 0, modelIt->second.vertexCount);
         } else {
           drawMesh(cubeMesh);
         }

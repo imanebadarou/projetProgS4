@@ -46,6 +46,20 @@ private:
     int indexCount{0};
   };
 
+  struct Uniforms {
+    GLint model{-1};
+    GLint view{-1};
+    GLint projection{-1};
+    GLint color{-1};
+    GLint viewPos{-1};
+    GLint dirLightDir{-1};
+    GLint dirLightColor{-1};
+    GLint ambientStrength{-1};
+    GLint pointLightPos{-1};
+    GLint pointLightColor{-1};
+    GLint isPiece{-1};
+  } uniforms;
+
   GLuint shaderProgram{0};
   Mesh cubeMesh;
   std::map<std::string, GpuModel> pieceModels;
@@ -57,95 +71,6 @@ private:
   GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
   int currentWidth{0}, currentHeight{0};
 
-  const std::string vertexShaderSrc = R"(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aNormal;
-
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-        uniform vec3 color;
-
-        out vec3 FragPos;
-        out vec3 Normal;
-        out vec3 Color;
-
-        void main() {
-            FragPos = vec3(model * vec4(aPos, 1.0));
-            Normal = mat3(transpose(inverse(model))) * aNormal;
-            Color = color;
-            gl_Position = projection * view * vec4(FragPos, 1.0);
-        }
-    )";
-
-  const std::string fragmentShaderSrc = R"(
-        #version 330 core
-        out vec4 FragColor;
-
-        in vec3 FragPos;
-        in vec3 Normal;
-        in vec3 Color;
-
-        // Light 1 : Directionnelle (ambiance globale)
-        uniform vec3 dirLightDir;
-        uniform vec3 dirLightColor;
-        uniform float ambientStrength;
-
-        // Light 2 : Point light mobile
-        uniform vec3 pointLightPos;
-        uniform vec3 pointLightColor;
-
-        uniform vec3 viewPos;
-        uniform bool isPiece;
-
-        void main() {
-            vec3 norm = normalize(Normal);
-            vec3 viewDir = normalize(viewPos - FragPos);
-
-            // 1. Directional Light
-            vec3 ambient = ambientStrength * dirLightColor;
-            vec3 lightDir = normalize(-dirLightDir);
-            float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * dirLightColor;
-
-            float spec = 0.0;
-            if (isPiece) { // Blinn-Phong pour les pièces
-                vec3 halfwayDir = normalize(lightDir + viewDir);  
-                spec = pow(max(dot(norm, halfwayDir), 0.0), 32.0);
-            }
-            vec3 specular = 0.5 * spec * dirLightColor;
-            
-            vec3 resultDir = ambient + diffuse + specular;
-
-            // 2. Point Light (mobile)
-            vec3 lightDirPt = normalize(pointLightPos - FragPos);
-            float diffPt = max(dot(norm, lightDirPt), 0.0);
-            
-            float distance = length(pointLightPos - FragPos);
-            float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
-            
-            vec3 diffusePt = diffPt * pointLightColor * attenuation;
-            
-            float specPt = 0.0;
-            if (isPiece) {
-                vec3 halfwayDirPt = normalize(lightDirPt + viewDir);  
-                specPt = pow(max(dot(norm, halfwayDirPt), 0.0), 64.0);
-            }
-            vec3 specularPt = 1.0 * specPt * pointLightColor * attenuation;
-            
-            vec3 resultPoint = diffusePt + specularPt;
-            
-            // Rim lighting (bonus effet stylisé sur les bords)
-            vec3 rim = vec3(0.0);
-            if (isPiece) {
-                float rimFactor = 1.0 - max(dot(viewDir, norm), 0.0);
-                rimFactor = smoothstep(0.6, 1.0, rimFactor);
-                rim = rimFactor * pointLightColor * attenuation;
-            }
-
-            vec3 finalColor = (resultDir + resultPoint + rim) * Color;
-            FragColor = vec4(finalColor, 1.0);
-        }
-    )";
+  const std::string vertexShaderPath = "../../assets/shaders/shader.vs.glsl";
+  const std::string fragmentShaderPath = "../../assets/shaders/shader.fs.glsl";
 };
