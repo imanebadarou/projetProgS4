@@ -331,10 +331,17 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1,
                            GL_FALSE, glm::value_ptr(pieceModel));
 
-        // Si on est en mode FirstPerson sur cette pièce, on ne l'affiche pas
-        // pour ne pas voir "l'intérieur" du modèle 3D.
+        // En FirstPerson, on masque la pièce portée par la caméra :
+        // - pièce sélectionnée immobile
+        // - pièce en cours d'animation (carré cible)
+        const bool isSelectedCarrier =
+            (x == selectedSquare.x && z == selectedSquare.y);
+        const bool isAnimatedCarrier = currentAnim.active &&
+                                       currentAnim.target.x == x &&
+                                       currentAnim.target.y == z;
+
         if (camera.getMode() == CameraMode::FirstPerson &&
-            x == selectedSquare.x && z == selectedSquare.y) {
+            (isSelectedCarrier || isAnimatedCarrier)) {
           continue;
         }
 
