@@ -1,18 +1,12 @@
 #include "scene_3d.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
-#include "obj_loader.hpp"
-#include <iostream>
 
 Scene3D::Scene3D() {}
 
 Scene3D::~Scene3D() {
     if (cubeVAO) glDeleteVertexArrays(1, &cubeVAO);
     if (cubeVBO) glDeleteBuffers(1, &cubeVBO);
-    if (pawnVAO) glDeleteVertexArrays(1, &pawnVAO);
-    if (pawnVBO) glDeleteBuffers(1, &pawnVBO);
-    if (rookVAO) glDeleteVertexArrays(1, &rookVAO);
-    if (rookVBO) glDeleteBuffers(1, &rookVBO);
     if (shaderProgram) glDeleteProgram(shaderProgram);
     if (fbo) glDeleteFramebuffers(1, &fbo);
     if (textureColorBuffer) glDeleteTextures(1, &textureColorBuffer);
@@ -83,37 +77,6 @@ void Scene3D::init() {
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-    // Load custom models
-    ModelData pawnModel = loadOBJ("../../assets/3Dmodels/white-pawn.obj");
-    if(pawnModel.vertexCount > 0) {
-        glGenVertexArrays(1, &pawnVAO);
-        glGenBuffers(1, &pawnVBO);
-        glBindVertexArray(pawnVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, pawnVBO);
-        glBufferData(GL_ARRAY_BUFFER, pawnModel.vertices.size() * sizeof(float), pawnModel.vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        pawnVertexCount = pawnModel.vertexCount;
-        std::cout << "Pawn model loaded (" << pawnVertexCount << " vertices)." << std::endl;
-    }
-
-    ModelData rookModel = loadOBJ("../../assets/3Dmodels/white-rook.obj");
-    if(rookModel.vertexCount > 0) {
-        glGenVertexArrays(1, &rookVAO);
-        glGenBuffers(1, &rookVBO);
-        glBindVertexArray(rookVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, rookVBO);
-        glBufferData(GL_ARRAY_BUFFER, rookModel.vertices.size() * sizeof(float), rookModel.vertices.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        rookVertexCount = rookModel.vertexCount;
-        std::cout << "Rook model loaded (" << rookVertexCount << " vertices)." << std::endl;
-    }
 }
 
 void Scene3D::resize(int width, int height) {
@@ -209,7 +172,6 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
     for (int x = 0; x < 8; ++x) {
         for (int z = 0; z < 8; ++z) {
-            glBindVertexArray(cubeVAO);
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
             model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
@@ -281,18 +243,7 @@ GLuint Scene3D::renderToTexture(const Camera& camera, int width, int height, Gam
 
                 glm::vec3 pieceColor = (p->getColor() == Color::white) ? glm::vec3(1.0f, 0.95f, 0.8f) : glm::vec3(0.1f, 0.1f, 0.1f);
                 glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, glm::value_ptr(pieceColor));
-                
-                std::string pieceName = GameLogic::getPieceName(p);
-                if (pieceName == "pawn" && pawnVAO != 0) {
-                    glBindVertexArray(pawnVAO);
-                    glDrawArrays(GL_TRIANGLES, 0, pawnVertexCount);
-                } else if (pieceName == "rook" && rookVAO != 0) {
-                    glBindVertexArray(rookVAO);
-                    glDrawArrays(GL_TRIANGLES, 0, rookVertexCount);
-                } else {
-                    glBindVertexArray(cubeVAO);
-                    glDrawArrays(GL_TRIANGLES, 0, 36);
-                }
+                glDrawArrays(GL_TRIANGLES, 0, 36);
             }
         }
     }
