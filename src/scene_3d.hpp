@@ -41,6 +41,11 @@ private:
     int vertexCount{0};
   };
 
+  struct InstanceData {
+    glm::mat4 model{1.0f};
+    glm::vec4 color{1.0f};
+  };
+
   struct Mesh {
     GLuint vao{0}, vbo{0}, ebo{0};
     int indexCount{0};
@@ -61,11 +66,16 @@ private:
   } uniforms;
 
   GLuint shaderProgram{0};
+  GLuint instanceVbo{0};
   Mesh cubeMesh;
   std::map<std::string, GpuModel> pieceModels;
 
   void initMesh(Mesh &mesh, const std::vector<float> &vertices,
                 const std::vector<unsigned int> &indices);
+  void setupInstancedAttributes(GLuint vao);
+  void uploadInstances(const std::vector<InstanceData> &instances);
+  void drawInstancedMesh(const Mesh &mesh, GLsizei instanceCount);
+  void drawInstancedModel(const GpuModel &model, GLsizei instanceCount);
   void drawMesh(const Mesh &mesh);
 
   GLuint fbo{0}, textureColorBuffer{0}, rbo{0};

@@ -21,6 +21,9 @@ Scene3D::~Scene3D() {
       glDeleteBuffers(1, &pair.second.vbo);
   }
 
+  if (instanceVbo)
+    glDeleteBuffers(1, &instanceVbo);
+
   if (shaderProgram)
     glDeleteProgram(shaderProgram);
   if (fbo)
@@ -50,6 +53,9 @@ void Scene3D::init() {
   uniforms.pointLightPos = glGetUniformLocation(shaderProgram, "pointLightPos");
   uniforms.pointLightColor =
       glGetUniformLocation(shaderProgram, "pointLightColor");
+  uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
+
+  glGenBuffers(1, &instanceVbo);
   uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
 
   const std::vector<float> vertices = {
@@ -86,6 +92,7 @@ void Scene3D::init() {
   };
 
   initMesh(cubeMesh, vertices, indices);
+  setupInstancedAttributes(cubeMesh.vao);
 
   // Chargement propre de tous les modèles 3D des pièces
   std::vector<std::string> colors = {"white", "black"};
@@ -116,6 +123,8 @@ void Scene3D::init() {
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
                               (void *)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
+
+        setupInstancedAttributes(gpu.vao);
 
         pieceModels[key] = gpu;
         // std::cout << "Successfully loaded: " << path << " (" <<
@@ -265,22 +274,18 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
     }
   }
 
+  std::vector<InstanceData> boardInstances;
+  boardInstances.reserve(64);
+  std::map<std::string, std::vector<InstanceData>> pieceBatches;
+
   for (int x = 0; x < 8; ++x) {
     for (int z = 0; z < 8; ++z) {
-      glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3((float)x, -0.1f, (float)z));
-      model = glm::scale(model, glm::vec3(1.0f, 0.2f, 1.0f));
-      glUniformMatrix4fv(uniforms.model, 1, GL_FALSE, glm::value_ptr(model));
-      glUniform1i(uniforms.isPiece, 0);
-
-      glm::vec3 tileColor;
       bool isBlackSquare = ((x + z) % 2 == 0);
-
-      const bool isValidMove = validMoveMask[x][z];
+      glm::vec3 tileColor;
 
       if (selectedSquare.x == x && selectedSquare.y == z) {
         tileColor = glm::vec3(0.8f, 0.8f, 0.2f);
-      } else if (isValidMove) {
+      } else if (validMoveMask[x][z]) {
         tileColor = glm::vec3(0.2f, 0.8f, 0.2f);
       } else if (hoveredSquare.x == x && hoveredSquare.y == z) {
         tileColor = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -289,90 +294,90 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                                   : glm::vec3(0.9f, 0.9f, 0.9f);
       }
 
-      glUniform3fv(uniforms.color, 1, glm::value_ptr(tileColor));
-      drawMesh(cubeMesh);
+      InstanceData tileInstance;
+      tileInstance.model =
+          glm::translate(glm::mat4(1.0f), glm::vec3((float)x, -0.1f, (float)z));
+      tileInstance.model =
+          glm::scale(tileInstance.model, glm::vec3(1.0f, 0.2f, 1.0f));
+      tileInstance.color = glm::vec4(tileColor, 1.0f);
+      boardInstances.push_back(tileInstance);
 
       Piece const *p = game.getBoard().getPieceFromPos({x, z});
-      if (p) {
-        glUniform1i(uniforms.isPiece, 1);
-        glm::vec3 drawPos((float)x, 0.4f, (float)z);
+      if (!p) {
+        continue;
+      }
 
-        // Animation fluide si c'est la pièce visée
-        if (currentAnim.active && currentAnim.target.x == x &&
-            currentAnim.target.y == z) {
-          double t =
-              (glfwGetTime() - currentAnim.startTime) / currentAnim.duration;
-          if (t >= 1.0) {
-            currentAnim.active = false;
-          } else {
-            // Interpolation smoothstep
-            float t_smooth = glm::smoothstep(0.0f, 1.0f, (float)t);
-            float startX = (float)currentAnim.source.x;
-            float startZ = (float)currentAnim.source.y;
+      const bool isSelectedCarrier =
+          (x == selectedSquare.x && z == selectedSquare.y);
+      const bool isAnimatedCarrier = currentAnim.active &&
+                                     currentAnim.target.x == x &&
+                                     currentAnim.target.y == z;
 
-            float curX = startX + ((float)x - startX) * t_smooth;
-            float curZ = startZ + ((float)z - startZ) * t_smooth;
+      if (camera.getMode() == CameraMode::FirstPerson &&
+          (isSelectedCarrier || isAnimatedCarrier)) {
+        continue;
+      }
 
-            // Sceau parabolique (hauteur dynamique)
-            float jumpHeight = 1.0f;
-            float curY =
-                0.4f + std::sin(t_smooth * glm::pi<float>()) * jumpHeight;
-
-            drawPos = glm::vec3(curX, curY, curZ);
-          }
-        }
-
-        glm::mat4 pieceModel = glm::mat4(1.0f);
-        pieceModel = glm::translate(pieceModel, drawPos);
-        pieceModel = glm::scale(pieceModel, glm::vec3(0.6f, 0.8f, 0.6f));
-
-        // Petite rotation d'animation
-        if (currentAnim.active && currentAnim.target.x == x &&
-            currentAnim.target.y == z) {
-          float t_smooth =
-              glm::smoothstep(0.0f, 1.0f,
-                              (float)((glfwGetTime() - currentAnim.startTime) /
-                                      currentAnim.duration));
-          pieceModel =
-              glm::rotate(pieceModel, t_smooth * glm::pi<float>() * 2.0f,
-                          glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-
-        glUniformMatrix4fv(uniforms.model, 1, GL_FALSE,
-                           glm::value_ptr(pieceModel));
-
-        // En FirstPerson, on masque la pièce portée par la caméra :
-        // - pièce sélectionnée immobile
-        // - pièce en cours d'animation (carré cible)
-        const bool isSelectedCarrier =
-            (x == selectedSquare.x && z == selectedSquare.y);
-        const bool isAnimatedCarrier = currentAnim.active &&
-                                       currentAnim.target.x == x &&
-                                       currentAnim.target.y == z;
-
-        if (camera.getMode() == CameraMode::FirstPerson &&
-            (isSelectedCarrier || isAnimatedCarrier)) {
-          continue;
-        }
-
-        glm::vec3 pieceColor = (p->getColor() == Color::white)
-                                   ? glm::vec3(1.0f, 0.95f, 0.8f)
-                                   : glm::vec3(0.1f, 0.1f, 0.1f);
-        glUniform3fv(uniforms.color, 1, glm::value_ptr(pieceColor));
-
-        std::string colorStr =
-            (p->getColor() == Color::white) ? "white-" : "black-";
-        std::string key = colorStr + GameLogic::getPieceName(p);
-
-        auto modelIt = pieceModels.find(key);
-        if (modelIt != pieceModels.end()) {
-          glBindVertexArray(modelIt->second.vao);
-          glDrawArrays(GL_TRIANGLES, 0, modelIt->second.vertexCount);
+      glm::vec3 drawPos((float)x, 0.4f, (float)z);
+      if (currentAnim.active && currentAnim.target.x == x &&
+          currentAnim.target.y == z) {
+        double t =
+            (glfwGetTime() - currentAnim.startTime) / currentAnim.duration;
+        if (t >= 1.0) {
+          currentAnim.active = false;
         } else {
-          drawMesh(cubeMesh);
+          float tSmooth = glm::smoothstep(0.0f, 1.0f, static_cast<float>(t));
+          float startX = static_cast<float>(currentAnim.source.x);
+          float startZ = static_cast<float>(currentAnim.source.y);
+          float curX = startX + ((float)x - startX) * tSmooth;
+          float curZ = startZ + ((float)z - startZ) * tSmooth;
+          float jumpHeight = 1.0f;
+          float curY = 0.4f + std::sin(tSmooth * glm::pi<float>()) * jumpHeight;
+          drawPos = glm::vec3(curX, curY, curZ);
         }
       }
+
+      glm::mat4 pieceModel = glm::translate(glm::mat4(1.0f), drawPos);
+      pieceModel = glm::scale(pieceModel, glm::vec3(0.6f, 0.8f, 0.6f));
+
+      if (currentAnim.active && currentAnim.target.x == x &&
+          currentAnim.target.y == z) {
+        float tSmooth = glm::smoothstep(
+            0.0f, 1.0f,
+            static_cast<float>((glfwGetTime() - currentAnim.startTime) /
+                               currentAnim.duration));
+        pieceModel = glm::rotate(pieceModel, tSmooth * glm::pi<float>() * 2.0f,
+                                 glm::vec3(0.0f, 1.0f, 0.0f));
+      }
+
+      glm::vec3 pieceColor = (p->getColor() == Color::white)
+                                 ? glm::vec3(1.0f, 0.95f, 0.8f)
+                                 : glm::vec3(0.1f, 0.1f, 0.1f);
+      std::string colorStr =
+          (p->getColor() == Color::white) ? "white-" : "black-";
+      std::string key = colorStr + GameLogic::getPieceName(p);
+
+      InstanceData pieceInstance;
+      pieceInstance.model = pieceModel;
+      pieceInstance.color = glm::vec4(pieceColor, 1.0f);
+      pieceBatches[key].push_back(pieceInstance);
     }
+  }
+
+  uploadInstances(boardInstances);
+  glUniform1i(uniforms.isPiece, 0);
+  drawInstancedMesh(cubeMesh, static_cast<GLsizei>(boardInstances.size()));
+
+  glUniform1i(uniforms.isPiece, 1);
+  for (auto &batch : pieceBatches) {
+    auto modelIt = pieceModels.find(batch.first);
+    if (modelIt == pieceModels.end() || batch.second.empty()) {
+      continue;
+    }
+
+    uploadInstances(batch.second);
+    drawInstancedModel(modelIt->second,
+                       static_cast<GLsizei>(batch.second.size()));
   }
 
   glBindVertexArray(0);
@@ -405,6 +410,53 @@ void Scene3D::initMesh(Mesh &mesh, const std::vector<float> &vertices,
 
   mesh.indexCount = indices.size();
   glBindVertexArray(0);
+}
+
+void Scene3D::setupInstancedAttributes(GLuint vao) {
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
+
+  constexpr GLsizei stride = sizeof(InstanceData);
+  for (int i = 0; i < 4; ++i) {
+    const GLuint location = 2 + static_cast<GLuint>(i);
+    glEnableVertexAttribArray(location);
+    glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, stride,
+                          reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    glVertexAttribDivisor(location, 1);
+  }
+
+  glEnableVertexAttribArray(6);
+  glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, stride,
+                        reinterpret_cast<void *>(sizeof(glm::mat4)));
+  glVertexAttribDivisor(6, 1);
+
+  glBindVertexArray(0);
+}
+
+void Scene3D::uploadInstances(const std::vector<InstanceData> &instances) {
+  glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<GLsizeiptr>(instances.size() * sizeof(InstanceData)),
+               instances.data(), GL_STREAM_DRAW);
+}
+
+void Scene3D::drawInstancedMesh(const Mesh &mesh, GLsizei instanceCount) {
+  if (instanceCount <= 0) {
+    return;
+  }
+
+  glBindVertexArray(mesh.vao);
+  glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0,
+                          instanceCount);
+}
+
+void Scene3D::drawInstancedModel(const GpuModel &model, GLsizei instanceCount) {
+  if (instanceCount <= 0) {
+    return;
+  }
+
+  glBindVertexArray(model.vao);
+  glDrawArraysInstanced(GL_TRIANGLES, 0, model.vertexCount, instanceCount);
 }
 
 void Scene3D::drawMesh(const Mesh &mesh) {
