@@ -33,7 +33,7 @@ private:
     CameraMode mode{CameraMode::Trackball};
 
     // Centre du plateau d'échecs (les pièces vont de x=0 à 7, z=0 à 7)
-    glm::vec3 target{3.5f, 0.0f, 3.5f};
+    glm::vec3 target{3.5f, 0.5f, 3.5f};
 
     // Variables Trackball
     float radius{12.0f};

@@ -55,6 +55,14 @@ void UIBoard::render() {
     ImGui::Begin("Vue 3D", &show_3d);
     ImVec2 avail = ImGui::GetContentRegionAvail();
     if (avail.x > 0 && avail.y > 0) {
+      // Mise à jour de la position subjective si on est en mode FirstPerson
+      if (camera.getMode() == CameraMode::FirstPerson) {
+          if (selected_piece.x != -1) {
+              // On place la caméra au sommet de la pièce (approx Y = 1.2f)
+              camera.setSubjectivePosition(glm::vec3((float)selected_piece.x, 1.2f, (float)selected_piece.y));
+          }
+      }
+
       GLuint tex =
           scene3d.renderToTexture(camera, avail.x, avail.y, game, hovered_piece,
                                   selected_piece, valid_moves);
@@ -80,8 +88,13 @@ void UIBoard::render() {
 
         if (ImGui::IsMouseDragging(1)) {
           ImVec2 delta = ImGui::GetMouseDragDelta(1);
-          camera.rotateTrackball(glm::radians(-delta.y * 0.5f),
-                                 glm::radians(-delta.x * 0.5f));
+          if (camera.getMode() == CameraMode::Trackball) {
+            camera.rotateTrackball(glm::radians(-delta.y * 0.5f),
+                                   glm::radians(-delta.x * 0.5f));
+          } else {
+            // Mode pièce : rotation 360° etc.
+            camera.rotateSubjective(-delta.x * 0.5f, -delta.y * 0.5f);
+          }
           ImGui::ResetMouseDragDelta(1);
         }
 
@@ -108,9 +121,27 @@ void UIBoard::render() {
   ImGui::Checkbox("Afficher vue 2D ImGui", &show_2d);
   if (show_3d) {
     ImGui::Spacing();
-    ImGui::Text("--- 3D Controls ---");
-    ImGui::Text("Right Click + Drag to rotate camera.");
-    ImGui::Text("Scroll to zoom.");
+    ImGui::Separator();
+    ImGui::Text("Mode de Caméra :");
+    int mode = (int)camera.getMode();
+    if (ImGui::RadioButton("Trackball", mode == (int)CameraMode::Trackball)) {
+        camera.setMode(CameraMode::Trackball);
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Vue Pièce", mode == (int)CameraMode::FirstPerson)) {
+        camera.setMode(CameraMode::FirstPerson);
+    }
+    
+    if (camera.getMode() == CameraMode::FirstPerson && selected_piece.x == -1) {
+        ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "Sélectionnez une pièce !");
+    }
+
+    ImGui::Spacing();
+    ImGui::Text("--- Contrôles 3D ---");
+    ImGui::Text("Clic Droit + Drag : Rotation");
+    if (camera.getMode() == CameraMode::Trackball) {
+        ImGui::Text("Molette : Zoom");
+    }
   }
   ImGui::End();
 

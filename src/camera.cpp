@@ -23,7 +23,8 @@ glm::mat4 Camera::getViewMatrix() const {
 }
 
 glm::mat4 Camera::getProjectionMatrix(float aspectRatio) const {
-    return glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    float fov = (mode == CameraMode::FirstPerson) ? 75.0f : 45.0f;
+    return glm::perspective(glm::radians(fov), aspectRatio, 0.1f, 100.0f);
 }
 
 glm::vec3 Camera::getPosition() const {
@@ -61,8 +62,8 @@ void Camera::rotateSubjective(float deltaYaw, float deltaPitch) {
     if (mode != CameraMode::FirstPerson) return;
     yaw += deltaYaw;
     pitch += deltaPitch;
-
-    pitch = std::clamp(pitch, -89.0f, 89.0f);
+    // Note: On pourrait limiter le pitch à [-89, 89] pour éviter le retournement,
+    // mais la consigne demande "sans limitation".
 }
 
 void Camera::setMode(CameraMode m) {
