@@ -30,6 +30,10 @@ private:
 
     GLuint shaderProgram{0};
     GLuint cubeVAO{0}, cubeVBO{0};
+    GLuint pawnVAO{0}, pawnVBO{0};
+    int pawnVertexCount{0};
+    GLuint rookVAO{0}, rookVBO{0};
+    int rookVertexCount{0};
     GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
     int currentWidth{0}, currentHeight{0};
 
