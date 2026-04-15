@@ -39,9 +39,17 @@ private:
         int vertexCount{0};
     };
 
+    struct Mesh {
+        GLuint vao{0}, vbo{0}, ebo{0};
+        int indexCount{0};
+    };
+
     GLuint shaderProgram{0};
-    GLuint cubeVAO{0}, cubeVBO{0};
+    Mesh cubeMesh;
     std::map<std::string, GpuModel> pieceModels;
+    
+    void initMesh(Mesh& mesh, const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
+    void drawMesh(const Mesh& mesh);
     
     GLuint fbo{0}, textureColorBuffer{0}, rbo{0};
     int currentWidth{0}, currentHeight{0};
