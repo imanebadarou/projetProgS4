@@ -1,40 +1,49 @@
 #include "board.hpp"
 
+namespace {
+
+constexpr std::array<int, 8> kClassicBackRank = {0, 1, 2, 3, 4, 2, 1, 0};
+
+using BoardGrid = std::array<std::array<std::unique_ptr<Piece>, 8>, 8>;
+
+void initializePawns(BoardGrid &board_positions) {
+  for (int column = 0; column < 8; ++column) {
+    board_positions[1][column] = std::make_unique<Pawn>(Color::white);
+    board_positions[6][column] = std::make_unique<Pawn>(Color::black);
+  }
+}
+
+enum class BackRankPiece {
+  Rook = 0,
+  Knight = 1,
+  Bishop = 2,
+  Queen = 3,
+  King = 4
+};
+
+std::unique_ptr<Piece> createBackRankPiece(BackRankPiece piece_type,
+                                           Color color) {
+  switch (piece_type) {
+  case BackRankPiece::Rook:
+    return std::make_unique<Rook>(color);
+  case BackRankPiece::Knight:
+    return std::make_unique<Knight>(color);
+  case BackRankPiece::Bishop:
+    return std::make_unique<Bishop>(color);
+  case BackRankPiece::Queen:
+    return std::make_unique<Queen>(color);
+  case BackRankPiece::King:
+    return std::make_unique<King>(color);
+  default:
+    return std::make_unique<Rook>(color);
+  }
+}
+
+} // namespace
+
 Board::Board() {
-  // initialisation du plateau de jeu
-  // création des pions blancs et noirs
-  for (int j{0}; j < 8; j++) {
-    _boardPos[1][j] = std::make_unique<Pawn>(Color::white);
-  }
-  for (int j{0}; j < 8; j++) {
-    _boardPos[6][j] = std::make_unique<Pawn>(Color::black);
-  }
-
-  // création des tours
-  _boardPos[0][0] = std::make_unique<Rook>(Color::white);
-  _boardPos[0][7] = std::make_unique<Rook>(Color::white);
-  _boardPos[7][0] = std::make_unique<Rook>(Color::black);
-  _boardPos[7][7] = std::make_unique<Rook>(Color::black);
-
-  // création des cavaliers
-  _boardPos[0][1] = std::make_unique<Knight>(Color::white);
-  _boardPos[0][6] = std::make_unique<Knight>(Color::white);
-  _boardPos[7][1] = std::make_unique<Knight>(Color::black);
-  _boardPos[7][6] = std::make_unique<Knight>(Color::black);
-
-  // création des fous
-  _boardPos[0][2] = std::make_unique<Bishop>(Color::white);
-  _boardPos[0][5] = std::make_unique<Bishop>(Color::white);
-  _boardPos[7][2] = std::make_unique<Bishop>(Color::black);
-  _boardPos[7][5] = std::make_unique<Bishop>(Color::black);
-
-  // création de la reine
-  _boardPos[0][3] = std::make_unique<Queen>(Color::white);
-  _boardPos[7][3] = std::make_unique<Queen>(Color::black);
-
-  // création du roi
-  _boardPos[0][4] = std::make_unique<King>(Color::white);
-  _boardPos[7][4] = std::make_unique<King>(Color::black);
+  initializePawns(_boardPos);
+  setBackRankFromPermutation(kClassicBackRank);
 }
 
 Piece const *Board::getPieceFromPos(coords position) const {
@@ -57,5 +66,14 @@ void Board::promotePawn(coords position, std::string const &pieceType,
     _boardPos[position.x][position.y] = std::make_unique<Bishop>(color);
   } else if (pieceType == "knight") {
     _boardPos[position.x][position.y] = std::make_unique<Knight>(color);
+  }
+}
+
+void Board::setBackRankFromPermutation(std::array<int, 8> const &permutation) {
+  for (int column = 0; column < 8; ++column) {
+    BackRankPiece piece_type = static_cast<BackRankPiece>(permutation[column]);
+
+    _boardPos[0][column] = createBackRankPiece(piece_type, Color::white);
+    _boardPos[7][column] = createBackRankPiece(piece_type, Color::black);
   }
 }

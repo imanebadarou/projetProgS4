@@ -1,4 +1,5 @@
 #include "game_logic.hpp"
+#include "game_mode_manager.hpp"
 #include "pieces/bishop.hpp"
 #include "pieces/king.hpp"
 #include "pieces/knight.hpp"
@@ -6,7 +7,15 @@
 #include "pieces/queen.hpp"
 #include "pieces/rook.hpp"
 
-GameLogic::GameLogic() : current_turn(Color::white), winner(0) {}
+#include <chrono>
+#include <iostream>
+#include <vector>
+
+GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
+  game_mode = GameModeManager::getInstance().getGameMode();
+  applyRandomStartPermutationIfNeeded();
+  resetRandomPromotionCountdown();
+}
 
 bool GameLogic::makeMove(coords from, coords to) {
   // Check if there's a piece at destination (capture)
@@ -15,6 +24,8 @@ bool GameLogic::makeMove(coords from, coords to) {
 
   // Execute the move
   board.movePiece(from, to);
+
+  applyRandomPromotionIfNeeded();
 
   // Switch turn
   current_turn = (current_turn == Color::white) ? Color::black : Color::white;
@@ -53,4 +64,89 @@ void GameLogic::resetGame() {
   board = Board();
   current_turn = Color::white;
   winner = 0;
+  game_mode = GameModeManager::getInstance().getGameMode();
+  applyRandomStartPermutationIfNeeded();
+  last_promotion_pos = {-1, -1};
+  last_promotion_time = 0.0;
+  resetRandomPromotionCountdown();
+}
+
+void GameLogic::setGameMode(GameMode mode) {
+  game_mode = mode;
+  board = Board();
+  applyRandomStartPermutationIfNeeded();
+  last_promotion_pos = {-1, -1};
+  last_promotion_time = 0.0;
+  resetRandomPromotionCountdown();
+}
+
+void GameLogic::applyRandomStartPermutationIfNeeded() {
+  if (game_mode != GameMode::RANDOM) {
+    return;
+  }
+
+  const std::array<int, 8> permutation =
+      random_permutation_distribution.sampleBackRankPermutation(random_manager);
+  board.setBackRankFromPermutation(permutation);
+}
+
+void GameLogic::resetRandomPromotionCountdown() {
+  const double u = random_manager.generateUniform();
+  moves_until_random_promotion =
+      geometric_promotion_distribution.sampleMovesUntilPromotion(u);
+}
+
+void GameLogic::applyRandomPromotionIfNeeded() {
+  if (game_mode != GameMode::RANDOM || isGameOver()) {
+    return;
+  }
+
+  std::cout << moves_until_random_promotion << std::endl;
+  --moves_until_random_promotion;
+  if (moves_until_random_promotion > 0) {
+    return;
+  }
+
+  promoteRandomPawnToQueen();
+  resetRandomPromotionCountdown();
+}
+
+void GameLogic::promoteRandomPawnToQueen() {
+  std::vector<coords> pawn_positions;
+  pawn_positions.reserve(16);
+
+  for (int x = 0; x < 8; ++x) {
+    for (int y = 0; y < 8; ++y) {
+      coords position{x, y};
+      Piece const *piece = board.getPieceFromPos(position);
+      if (piece && dynamic_cast<Pawn const *>(piece)) {
+        pawn_positions.push_back(position);
+      }
+    }
+  }
+
+  if (pawn_positions.empty()) {
+    return;
+  }
+
+  size_t random_index = static_cast<size_t>(random_manager.generateUniform() *
+                                            pawn_positions.size());
+  if (random_index >= pawn_positions.size()) {
+    random_index = pawn_positions.size() - 1;
+  }
+
+  const coords selected = pawn_positions[random_index];
+  Piece const *pawn = board.getPieceFromPos(selected);
+  if (!pawn) {
+    return;
+  }
+
+  board.promotePawn(selected, "queen", pawn->getColor());
+
+  // Track the promotion for UI notification
+  last_promotion_pos = selected;
+  last_promotion_time =
+      std::chrono::duration<double>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
 }
