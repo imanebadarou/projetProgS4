@@ -13,6 +13,7 @@
 
 GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
   game_mode = GameModeManager::getInstance().getGameMode();
+  applyRandomStartPermutationIfNeeded();
   resetRandomPromotionCountdown();
 }
 
@@ -64,6 +65,7 @@ void GameLogic::resetGame() {
   current_turn = Color::white;
   winner = 0;
   game_mode = GameModeManager::getInstance().getGameMode();
+  applyRandomStartPermutationIfNeeded();
   last_promotion_pos = {-1, -1};
   last_promotion_time = 0.0;
   resetRandomPromotionCountdown();
@@ -71,7 +73,21 @@ void GameLogic::resetGame() {
 
 void GameLogic::setGameMode(GameMode mode) {
   game_mode = mode;
+  board = Board();
+  applyRandomStartPermutationIfNeeded();
+  last_promotion_pos = {-1, -1};
+  last_promotion_time = 0.0;
   resetRandomPromotionCountdown();
+}
+
+void GameLogic::applyRandomStartPermutationIfNeeded() {
+  if (game_mode != GameMode::RANDOM) {
+    return;
+  }
+
+  const std::array<int, 8> permutation =
+      random_permutation_distribution.sampleBackRankPermutation(random_manager);
+  board.setBackRankFromPermutation(permutation);
 }
 
 void GameLogic::resetRandomPromotionCountdown() {

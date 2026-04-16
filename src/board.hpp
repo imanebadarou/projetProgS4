@@ -8,8 +8,10 @@
 #include "pieces/rook.hpp"
 #include "utils.hpp"
 
+#include <array>
 #include <memory>
 #include <string>
+
 
 class Piece;
 
@@ -22,4 +24,5 @@ public:
   Piece const *getPieceFromPos(coords position) const;
   void movePiece(coords from, coords to);
   void promotePawn(coords position, std::string const &pieceType, Color color);
+  void setBackRankFromPermutation(std::array<int, 8> const &permutation);
 };

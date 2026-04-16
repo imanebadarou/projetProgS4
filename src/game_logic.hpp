@@ -4,6 +4,7 @@
 #include "game_mode.hpp"
 #include "pieces/piece.hpp"
 #include "probability_distribution/geometric_promotion_distribution.hpp"
+#include "probability_distribution/random_permutation_distribution.hpp"
 #include "random.hpp"
 #include <string>
 
@@ -39,11 +40,13 @@ private:
   GameMode game_mode = GameMode::NORMAL;
   RandomManager random_manager;
   GeometricPromotionDistribution geometric_promotion_distribution;
+  RandomPermutationDistribution random_permutation_distribution;
   int moves_until_random_promotion = 1;
   coords last_promotion_pos{-1, -1};
   double last_promotion_time = 0.0;
 
   void checkKingCapture(Piece const *captured);
+  void applyRandomStartPermutationIfNeeded();
   void resetRandomPromotionCountdown();
   void applyRandomPromotionIfNeeded();
   void promoteRandomPawnToQueen();
