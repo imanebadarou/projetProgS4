@@ -48,6 +48,7 @@ void main() {
     vec3 specularPt = 1.0 * specPt * pointLightColor * attenuation;
     vec3 resultPoint = diffusePt + specularPt;
 
+//rim lighting
     vec3 rim = vec3(0.0);
     if (isPiece) {
         float rimFactor = 1.0 - max(dot(viewDir, norm), 0.0);
