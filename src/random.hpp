@@ -1,3 +1,10 @@
 #pragma once
 
-double generate_random_double();
+class RandomManager {
+public:
+  // Tirage uniforme dans [0, 1)
+  double generateUniform() const;
+
+  // Retourne true si random_01 < p
+  bool bernoulliFromRandom(double random_01, double p) const;
+};

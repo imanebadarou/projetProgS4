@@ -1,4 +1,6 @@
 #include "mode_selector.hpp"
+
+#include <algorithm>
 #include <imgui.h>
 
 ModeSelector::ModeSelector() {}
@@ -15,6 +17,13 @@ bool ModeSelector::render() {
                    ImGuiWindowFlags_NoMove |
                        ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::Text("Bienvenue au Jeu d'Échecs 3D !");
+    ImGui::Spacing();
+    ImGui::Text("Joueur 1 = Blanc | Joueur 2 = Noir");
+    ImGui::InputInt("ELO Blanc", &white_elo);
+    ImGui::InputInt("ELO Noir", &black_elo);
+    white_elo = std::max(1, white_elo);
+    black_elo = std::max(1, black_elo);
+
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Text("Sélectionnez le mode de jeu :");

@@ -3,15 +3,20 @@
 #include "glm/fwd.hpp"
 #include "glm/glm.hpp"
 #include "mode_selector.hpp"
+#include "probability_distribution/starting_player_policy.hpp"
 #include "quick_imgui/quick_imgui.hpp"
+#include "random.hpp"
 #include "texture_manager.hpp"
 #include "ui_board.hpp"
+
 
 int main() {
   GameLogic game;
   TextureManager textureManager;
   UIBoard uiBoard(game, textureManager);
   ModeSelector modeSelector;
+  RandomManager randomManager;
+  StartingPlayerPolicy startingPlayerPolicy;
 
   bool game_started = false;
   bool show_mode_selector = true;
@@ -27,8 +32,31 @@ int main() {
            [&]() {
              if (show_mode_selector) {
                if (modeSelector.render()) {
-                 GameModeManager::getInstance().setGameMode(
-                     modeSelector.getSelectedMode());
+                 const GameMode selected_mode = modeSelector.getSelectedMode();
+                 GameModeManager::getInstance().setGameMode(selected_mode);
+
+                 if (selected_mode == GameMode::RANDOM) {
+                   const double random_01 = randomManager.generateUniform();
+                   const double p =
+                       startingPlayerPolicy.computeLowerEloStartProbability(
+                           static_cast<double>(modeSelector.getWhiteElo()),
+                           static_cast<double>(modeSelector.getBlackElo()));
+
+                   const bool lower_elo_starts =
+                       randomManager.bernoulliFromRandom(random_01, p);
+
+                   const bool white_starts =
+                       startingPlayerPolicy.shouldWhiteStart(
+                           static_cast<double>(modeSelector.getWhiteElo()),
+                           static_cast<double>(modeSelector.getBlackElo()),
+                           lower_elo_starts);
+
+                   game.setCurrentTurn(white_starts ? Color::white
+                                                    : Color::black);
+                 } else {
+                   game.setCurrentTurn(Color::white);
+                 }
+
                  game_started = true;
                  show_mode_selector = false;
                }
