@@ -3,6 +3,7 @@
 #include "board.hpp"
 #include "game_mode.hpp"
 #include "pieces/piece.hpp"
+#include "probability_distribution/continuous_uniform_distribution.hpp"
 #include "probability_distribution/geometric_promotion_distribution.hpp"
 #include "probability_distribution/random_permutation_distribution.hpp"
 #include "random.hpp"
@@ -27,6 +28,7 @@ public:
   coords getLastRandomPromotionPos() const { return last_promotion_pos; }
   double getLastPromotionTime() const { return last_promotion_time; }
   bool hasRandomPromotionOccurred() const { return last_promotion_pos.x != -1; }
+  double sampleMoveSpeedFactor() const;
 
   // Setters
   void setCurrentTurn(Color color) { current_turn = color; }
@@ -39,6 +41,7 @@ private:
   int winner; // 0 = playing, 1 = white wins, 2 = black wins
   GameMode game_mode = GameMode::NORMAL;
   RandomManager random_manager;
+  ContinuousUniformDistribution move_speed_distribution;
   GeometricPromotionDistribution geometric_promotion_distribution;
   RandomPermutationDistribution random_permutation_distribution;
   int moves_until_random_promotion = 1;

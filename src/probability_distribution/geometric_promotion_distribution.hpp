@@ -2,7 +2,7 @@
 
 class GeometricPromotionDistribution {
 public:
-  explicit GeometricPromotionDistribution(double probability = 0.9)
+  explicit GeometricPromotionDistribution(double probability = 0.05)
       : promotion_probability(probability) {}
 
   // Inverse CDF for geometric law (support starts at 1):

@@ -21,7 +21,7 @@ public:
                          coords selectedSquare,
                          const std::vector<std::array<int, 2>> &validMoves);
 
-  void pushAnimation(coords from, coords to);
+  void pushAnimation(coords from, coords to, double speed_factor = 1.0);
   glm::vec3 getModelPos(int x, int z) const;
   bool isAnimationActive() const;
   bool getAnimatedWorldPositionFromSource(coords source,
@@ -88,8 +88,12 @@ private:
 
   const std::string vertexShaderPath = "../../assets/shaders/shader.vs.glsl";
   const std::string fragmentShaderPath = "../../assets/shaders/shader.fs.glsl";
-  const std::string skyboxVertexShaderPath = "../../assets/shaders/skybox.vs.glsl";
-  const std::string skyboxFragmentShaderPath = "../../assets/shaders/skybox.fs.glsl";
-  const std::string pieceVertexShaderPath = "../../assets/shaders/piece.vs.glsl";
-  const std::string pieceFragmentShaderPath = "../../assets/shaders/piece.fs.glsl";
+  const std::string skyboxVertexShaderPath =
+      "../../assets/shaders/skybox.vs.glsl";
+  const std::string skyboxFragmentShaderPath =
+      "../../assets/shaders/skybox.fs.glsl";
+  const std::string pieceVertexShaderPath =
+      "../../assets/shaders/piece.vs.glsl";
+  const std::string pieceFragmentShaderPath =
+      "../../assets/shaders/piece.fs.glsl";
 };

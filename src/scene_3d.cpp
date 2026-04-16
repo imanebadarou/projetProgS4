@@ -68,18 +68,23 @@ void Scene3D::init() {
   uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
 
   glGenBuffers(1, &instanceVbo);
-  
-  pieceShader = createProgramFromFiles(pieceVertexShaderPath, pieceFragmentShaderPath);
+
+  pieceShader =
+      createProgramFromFiles(pieceVertexShaderPath, pieceFragmentShaderPath);
   pieceUniforms.model = glGetUniformLocation(pieceShader, "model");
   pieceUniforms.view = glGetUniformLocation(pieceShader, "view");
   pieceUniforms.projection = glGetUniformLocation(pieceShader, "projection");
   pieceUniforms.color = glGetUniformLocation(pieceShader, "color");
   pieceUniforms.viewPos = glGetUniformLocation(pieceShader, "viewPos");
   pieceUniforms.dirLightDir = glGetUniformLocation(pieceShader, "dirLightDir");
-  pieceUniforms.dirLightColor = glGetUniformLocation(pieceShader, "dirLightColor");
-  pieceUniforms.ambientStrength = glGetUniformLocation(pieceShader, "ambientStrength");
-  pieceUniforms.pointLightPos = glGetUniformLocation(pieceShader, "pointLightPos");
-  pieceUniforms.pointLightColor = glGetUniformLocation(pieceShader, "pointLightColor");
+  pieceUniforms.dirLightColor =
+      glGetUniformLocation(pieceShader, "dirLightColor");
+  pieceUniforms.ambientStrength =
+      glGetUniformLocation(pieceShader, "ambientStrength");
+  pieceUniforms.pointLightPos =
+      glGetUniformLocation(pieceShader, "pointLightPos");
+  pieceUniforms.pointLightColor =
+      glGetUniformLocation(pieceShader, "pointLightColor");
 
   const std::vector<float> vertices = {
       // positions          // normals
@@ -118,35 +123,36 @@ void Scene3D::init() {
   setupInstancedAttributes(cubeMesh.vao);
 
   const std::vector<float> skyboxVertices = {
-    -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
+      -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
+      1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
 
-    -1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
-    -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+      -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
+      -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
 
-     1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
+      1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
 
-    -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+      -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
 
-    -1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,
-     1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f,
+      -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,
+      1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f,
 
-    -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,
-     1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f
-  };
+      -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
+      1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
 
   glGenVertexArrays(1, &skyboxMesh.vao);
   glGenBuffers(1, &skyboxMesh.vbo);
   glBindVertexArray(skyboxMesh.vao);
   glBindBuffer(GL_ARRAY_BUFFER, skyboxMesh.vbo);
-  glBufferData(GL_ARRAY_BUFFER, skyboxVertices.size() * sizeof(float), &skyboxVertices[0], GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, skyboxVertices.size() * sizeof(float),
+               &skyboxVertices[0], GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glBindVertexArray(0);
 
-  skyboxShader = createProgramFromFiles(skyboxVertexShaderPath, skyboxFragmentShaderPath);
+  skyboxShader =
+      createProgramFromFiles(skyboxVertexShaderPath, skyboxFragmentShaderPath);
   skyboxTexture = TextureManager::loadTexture("../../assets/skybox/skybox.png");
 
   // Chargement propre de tous les modèles 3D des pièces
@@ -226,11 +232,14 @@ void Scene3D::resize(int width, int height) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Scene3D::pushAnimation(coords from, coords to) {
+void Scene3D::pushAnimation(coords from, coords to, double speed_factor) {
   currentAnim.active = true;
   currentAnim.source = from;
   currentAnim.target = to;
   currentAnim.startTime = glfwGetTime();
+  const double clamped_speed_factor = speed_factor > 0.0 ? speed_factor : 1.0;
+  currentAnim.duration = 0.5 / clamped_speed_factor;
+  std::cout << "move duration: " << currentAnim.duration << std::endl;
 }
 
 bool Scene3D::isAnimationActive() const { return currentAnim.active; }
@@ -314,8 +323,10 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   glUseProgram(skyboxShader);
   glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
   glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
-  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
-  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE,
+                     glm::value_ptr(skyboxView));
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1,
+                     GL_FALSE, glm::value_ptr(projection));
   glBindVertexArray(skyboxMesh.vao);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, skyboxTexture);
@@ -352,8 +363,10 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
 
   // Ajout d'une bordure sous l'échiquier
   InstanceData borderInstance;
-  borderInstance.model = glm::translate(glm::mat4(1.0f), glm::vec3(3.5f, -0.15f, 3.5f));
-  borderInstance.model = glm::scale(borderInstance.model, glm::vec3(8.5f, 0.25f, 8.5f));
+  borderInstance.model =
+      glm::translate(glm::mat4(1.0f), glm::vec3(3.5f, -0.15f, 3.5f));
+  borderInstance.model =
+      glm::scale(borderInstance.model, glm::vec3(8.5f, 0.25f, 8.5f));
   borderInstance.color = glm::vec4(0.2f, 0.1f, 0.05f, 1.0f); // Brun bois sombre
   boardInstances.push_back(borderInstance);
 
@@ -390,9 +403,11 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
       bool isAnimatingThisPiece = false;
       if (currentAnim.active && currentAnim.target.x == x &&
           currentAnim.target.y == z) {
-        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) / currentAnim.duration);
+        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) /
+                                     currentAnim.duration);
         if (t >= 1.0f) {
-          // Animation terminée, mais on ne désactive pas ici car on est en plein milieu du rendu des instances
+          // Animation terminée, mais on ne désactive pas ici car on est en
+          // plein milieu du rendu des instances
         } else {
           isAnimatingThisPiece = true;
           float tSmooth = glm::smoothstep(0.0f, 1.0f, t);
@@ -408,36 +423,42 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
 
       // On cache la pièce si la caméra est "dedans" (mode pièce)
       if (camera.getMode() == CameraMode::FirstPerson) {
-          glm::vec3 camPos = camera.getPosition();
-          float distSq = (drawPos.x - camPos.x) * (drawPos.x - camPos.x) + 
-                         (drawPos.z - camPos.z) * (drawPos.z - camPos.z);
-          if (distSq < 0.1f) {
-              continue;
-          }
+        glm::vec3 camPos = camera.getPosition();
+        float distSq = (drawPos.x - camPos.x) * (drawPos.x - camPos.x) +
+                       (drawPos.z - camPos.z) * (drawPos.z - camPos.z);
+        if (distSq < 0.1f) {
+          continue;
+        }
       }
 
       glm::mat4 pieceModel = glm::translate(glm::mat4(1.0f), drawPos);
       pieceModel = glm::scale(pieceModel, glm::vec3(0.6f, 0.8f, 0.6f));
 
       if (isAnimatingThisPiece) {
-        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) / currentAnim.duration);
+        float t = static_cast<float>((glfwGetTime() - currentAnim.startTime) /
+                                     currentAnim.duration);
         float tSmooth = glm::smoothstep(0.0f, 1.0f, t);
         pieceModel = glm::rotate(pieceModel, tSmooth * glm::pi<float>() * 2.0f,
                                  glm::vec3(0.0f, 1.0f, 0.0f));
       }
 
       glm::vec3 pieceBaseColor = (p->getColor() == Color::white)
-                                 ? glm::vec3(1.0f, 0.95f, 0.8f)
-                                 : glm::vec3(0.15f, 0.15f, 0.15f);
+                                     ? glm::vec3(1.0f, 0.95f, 0.8f)
+                                     : glm::vec3(0.15f, 0.15f, 0.15f);
 
       // Calcul de l'état (Sélectionné, Sélectionnable, Inactif)
       glm::vec3 stateColor = pieceBaseColor;
       if (selectedSquare.x == x && selectedSquare.y == z) {
-          // ÉTAT SÉLECTIONNÉ : On tire vers le jaune/or
-          stateColor = glm::mix(pieceBaseColor, glm::vec3(1.0f, 0.8f, 0.0f), 0.6f);
-      } else if (validMoveMask[x][z] || (hoveredSquare.x == x && hoveredSquare.y == z && p->getColor() == game.getCurrentTurn())) {
-          // ÉTAT SÉLECTIONNABLE : On tire vers le vert clair pour le survol/mouvement
-          stateColor = glm::mix(pieceBaseColor, glm::vec3(0.4f, 1.0f, 0.4f), 0.4f);
+        // ÉTAT SÉLECTIONNÉ : On tire vers le jaune/or
+        stateColor =
+            glm::mix(pieceBaseColor, glm::vec3(1.0f, 0.8f, 0.0f), 0.6f);
+      } else if (validMoveMask[x][z] ||
+                 (hoveredSquare.x == x && hoveredSquare.y == z &&
+                  p->getColor() == game.getCurrentTurn())) {
+        // ÉTAT SÉLECTIONNABLE : On tire vers le vert clair pour le
+        // survol/mouvement
+        stateColor =
+            glm::mix(pieceBaseColor, glm::vec3(0.4f, 1.0f, 0.4f), 0.4f);
       }
 
       std::string colorStr =
@@ -453,9 +474,9 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
 
   // Désactivation propre de l'animation si elle est finie
   if (currentAnim.active) {
-      if ((glfwGetTime() - currentAnim.startTime) / currentAnim.duration >= 1.0) {
-          currentAnim.active = false;
-      }
+    if ((glfwGetTime() - currentAnim.startTime) / currentAnim.duration >= 1.0) {
+      currentAnim.active = false;
+    }
   }
 
   uploadInstances(boardInstances);
@@ -464,14 +485,16 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
 
   glUniform1i(uniforms.isPiece, 1);
   glUseProgram(pieceShader);
-  glUniformMatrix4fv(pieceUniforms.projection, 1, GL_FALSE, glm::value_ptr(projection));
+  glUniformMatrix4fv(pieceUniforms.projection, 1, GL_FALSE,
+                     glm::value_ptr(projection));
   glUniformMatrix4fv(pieceUniforms.view, 1, GL_FALSE, glm::value_ptr(view));
   glUniform3fv(pieceUniforms.viewPos, 1, glm::value_ptr(camera.getPosition()));
   glUniform3fv(pieceUniforms.dirLightDir, 1, glm::value_ptr(dirLightDir));
   glUniform3fv(pieceUniforms.dirLightColor, 1, glm::value_ptr(dirLightColor));
   glUniform1f(pieceUniforms.ambientStrength, ambientStrength);
   glUniform3fv(pieceUniforms.pointLightPos, 1, glm::value_ptr(pointLightPos));
-  glUniform3fv(pieceUniforms.pointLightColor, 1, glm::value_ptr(pointLightColor));
+  glUniform3fv(pieceUniforms.pointLightColor, 1,
+               glm::value_ptr(pointLightColor));
 
   for (auto &batch : pieceBatches) {
     auto modelIt = pieceModels.find(batch.first);

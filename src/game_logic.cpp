@@ -17,6 +17,14 @@ GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
   resetRandomPromotionCountdown();
 }
 
+double GameLogic::sampleMoveSpeedFactor() const {
+  if (game_mode != GameMode::RANDOM) {
+    return 1.0;
+  }
+
+  return move_speed_distribution.sample(random_manager);
+}
+
 bool GameLogic::makeMove(coords from, coords to) {
   // Check if there's a piece at destination (capture)
   Piece const *captured = board.getPieceFromPos(to);
