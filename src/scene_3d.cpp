@@ -426,16 +426,27 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                                  glm::vec3(0.0f, 1.0f, 0.0f));
       }
 
-      glm::vec3 pieceColor = (p->getColor() == Color::white)
+      glm::vec3 pieceBaseColor = (p->getColor() == Color::white)
                                  ? glm::vec3(1.0f, 0.95f, 0.8f)
-                                 : glm::vec3(0.1f, 0.1f, 0.1f);
+                                 : glm::vec3(0.15f, 0.15f, 0.15f);
+
+      // Calcul de l'état (Sélectionné, Sélectionnable, Inactif)
+      glm::vec3 stateColor = pieceBaseColor;
+      if (selectedSquare.x == x && selectedSquare.y == z) {
+          // ÉTAT SÉLECTIONNÉ : On tire vers le jaune/or
+          stateColor = glm::mix(pieceBaseColor, glm::vec3(1.0f, 0.8f, 0.0f), 0.6f);
+      } else if (validMoveMask[x][z] || (hoveredSquare.x == x && hoveredSquare.y == z && p->getColor() == game.getCurrentTurn())) {
+          // ÉTAT SÉLECTIONNABLE : On tire vers le vert clair pour le survol/mouvement
+          stateColor = glm::mix(pieceBaseColor, glm::vec3(0.4f, 1.0f, 0.4f), 0.4f);
+      }
+
       std::string colorStr =
           (p->getColor() == Color::white) ? "white-" : "black-";
       std::string key = colorStr + GameLogic::getPieceName(p);
 
       InstanceData pieceInstance;
       pieceInstance.model = pieceModel;
-      pieceInstance.color = glm::vec4(pieceColor, 1.0f);
+      pieceInstance.color = glm::vec4(stateColor, 1.0f);
       pieceBatches[key].push_back(pieceInstance);
     }
   }
