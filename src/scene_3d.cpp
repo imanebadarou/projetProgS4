@@ -1,5 +1,6 @@
 #include "scene_3d.hpp"
 #include "obj_loader.hpp"
+#include "texture_manager.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -24,8 +25,17 @@ Scene3D::~Scene3D() {
   if (instanceVbo)
     glDeleteBuffers(1, &instanceVbo);
 
+  if (skyboxMesh.vao)
+    glDeleteVertexArrays(1, &skyboxMesh.vao);
+  if (skyboxMesh.vbo)
+    glDeleteBuffers(1, &skyboxMesh.vbo);
+  if (skyboxTexture)
+    glDeleteTextures(1, &skyboxTexture);
+
   if (shaderProgram)
     glDeleteProgram(shaderProgram);
+  if (skyboxShader)
+    glDeleteProgram(skyboxShader);
   if (fbo)
     glDeleteFramebuffers(1, &fbo);
   if (textureColorBuffer)
@@ -93,6 +103,38 @@ void Scene3D::init() {
 
   initMesh(cubeMesh, vertices, indices);
   setupInstancedAttributes(cubeMesh.vao);
+
+  const std::vector<float> skyboxVertices = {
+    -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f
+  };
+
+  glGenVertexArrays(1, &skyboxMesh.vao);
+  glGenBuffers(1, &skyboxMesh.vbo);
+  glBindVertexArray(skyboxMesh.vao);
+  glBindBuffer(GL_ARRAY_BUFFER, skyboxMesh.vbo);
+  glBufferData(GL_ARRAY_BUFFER, skyboxVertices.size() * sizeof(float), &skyboxVertices[0], GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glBindVertexArray(0);
+
+  skyboxShader = createProgramFromFiles(skyboxVertexShaderPath, skyboxFragmentShaderPath);
+  skyboxTexture = TextureManager::loadTexture("../../assets/skybox/skybox.png");
 
   // Chargement propre de tous les modèles 3D des pièces
   std::vector<std::string> colors = {"white", "black"};
@@ -254,7 +296,24 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
 
-  // 2. Position de la lumière mobile flottante
+  // Rendu de la Skybox
+  glDepthFunc(GL_LEQUAL);
+  glUseProgram(skyboxShader);
+  glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+  glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
+  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+  glBindVertexArray(skyboxMesh.vao);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, skyboxTexture);
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glBindVertexArray(0);
+  glDepthFunc(GL_LESS);
+
+  glUseProgram(shaderProgram);
+
+  // Position de la lumière mobile flottante
   float time = (float)glfwGetTime();
   glm::vec3 pointLightPos = glm::vec3(3.5f + std::sin(time * 0.8f) * 4.0f,
                                       2.0f + std::sin(time * 2.0f) * 0.5f,
@@ -275,8 +334,15 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   }
 
   std::vector<InstanceData> boardInstances;
-  boardInstances.reserve(64);
+  boardInstances.reserve(65); // 64 cases + 1 bordure
   std::map<std::string, std::vector<InstanceData>> pieceBatches;
+
+  // Ajout d'une bordure sous l'échiquier
+  InstanceData borderInstance;
+  borderInstance.model = glm::translate(glm::mat4(1.0f), glm::vec3(3.5f, -0.15f, 3.5f));
+  borderInstance.model = glm::scale(borderInstance.model, glm::vec3(8.5f, 0.25f, 8.5f));
+  borderInstance.color = glm::vec4(0.2f, 0.1f, 0.05f, 1.0f); // Brun bois sombre
+  boardInstances.push_back(borderInstance);
 
   for (int x = 0; x < 8; ++x) {
     for (int z = 0; z < 8; ++z) {
@@ -327,7 +393,7 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         }
       }
 
-      // Proximity hide : on cache la pièce si la caméra est "dedans" (mode pièce)
+      // On cache la pièce si la caméra est "dedans" (mode pièce)
       if (camera.getMode() == CameraMode::FirstPerson) {
           glm::vec3 camPos = camera.getPosition();
           float distSq = (drawPos.x - camPos.x) * (drawPos.x - camPos.x) + 

@@ -67,8 +67,11 @@ private:
   } uniforms;
 
   GLuint shaderProgram{0};
+  GLuint skyboxShader{0};
   GLuint instanceVbo{0};
   Mesh cubeMesh;
+  Mesh skyboxMesh;
+  GLuint skyboxTexture{0};
   std::map<std::string, GpuModel> pieceModels;
 
   void initMesh(Mesh &mesh, const std::vector<float> &vertices,
@@ -84,4 +87,6 @@ private:
 
   const std::string vertexShaderPath = "../../assets/shaders/shader.vs.glsl";
   const std::string fragmentShaderPath = "../../assets/shaders/shader.fs.glsl";
+  const std::string skyboxVertexShaderPath = "../../assets/shaders/skybox.vs.glsl";
+  const std::string skyboxFragmentShaderPath = "../../assets/shaders/skybox.fs.glsl";
 };
