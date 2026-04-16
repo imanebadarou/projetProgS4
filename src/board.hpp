@@ -23,6 +23,7 @@ public:
   Board();
   Piece const *getPieceFromPos(coords position) const;
   void movePiece(coords from, coords to);
+  void removePiece(coords position);
   void promotePawn(coords position, std::string const &pieceType, Color color);
   void setBackRankFromPermutation(std::array<int, 8> const &permutation);
 };

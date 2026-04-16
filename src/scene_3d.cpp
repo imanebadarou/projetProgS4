@@ -195,6 +195,30 @@ void Scene3D::init() {
       }
     }
   }
+
+  // Load asteroid model
+  ModelData asteroidData =
+      loadOBJ("../../assets/3Dmodels/Rocky_Asteroid_4.obj");
+  if (asteroidData.vertexCount > 0) {
+    asteroidModel.vertexCount = asteroidData.vertexCount;
+
+    glGenVertexArrays(1, &asteroidModel.vao);
+    glGenBuffers(1, &asteroidModel.vbo);
+
+    glBindVertexArray(asteroidModel.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, asteroidModel.vbo);
+    glBufferData(GL_ARRAY_BUFFER, asteroidData.vertices.size() * sizeof(float),
+                 asteroidData.vertices.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                          (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    setupInstancedAttributes(asteroidModel.vao);
+  }
 }
 
 void Scene3D::resize(int width, int height) {
@@ -295,6 +319,8 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                      glm::value_ptr(projection));
   glUniformMatrix4fv(uniforms.view, 1, GL_FALSE, glm::value_ptr(view));
   glUniform3fv(uniforms.viewPos, 1, glm::value_ptr(camera.getPosition()));
+
+  game.updateMeteoriteEvents();
 
   // 1. Configurateur d'ambiance selon le tour
   glm::vec3 dirLightDir, dirLightColor, pointLightColor;
@@ -505,6 +531,41 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
     uploadInstances(batch.second);
     drawInstancedModel(modelIt->second,
                        static_cast<GLsizei>(batch.second.size()));
+  }
+
+  // Render meteorite if active
+  if (game.hasMeteoriteEvent() && asteroidModel.vertexCount > 0) {
+    const double current_time = glfwGetTime();
+    const double time_since_event = current_time - game.getMeteoriteStartTime();
+    const double meteorite_duration = 3.0; // seconds to fall
+
+    if (time_since_event < meteorite_duration) {
+      const coords meteor_pos = game.getMeteoritePosition();
+      const float fall_progress =
+          static_cast<float>(time_since_event / meteorite_duration);
+      const float start_height = 10.0f;
+      const float end_height = 0.4f;
+      const float current_height =
+          start_height + (end_height - start_height) * fall_progress;
+
+      glm::mat4 meteorModel = glm::translate(
+          glm::mat4(1.0f),
+          glm::vec3(static_cast<float>(meteor_pos.x), current_height,
+                    static_cast<float>(meteor_pos.y)));
+      meteorModel = glm::scale(meteorModel, glm::vec3(0.8f, 0.8f, 0.8f));
+      meteorModel =
+          glm::rotate(meteorModel, static_cast<float>(time_since_event),
+                      glm::vec3(1.0f, 1.0f, 0.0f));
+
+      std::vector<InstanceData> meteorInstances;
+      InstanceData meteorInstance;
+      meteorInstance.model = meteorModel;
+      meteorInstance.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Black
+      meteorInstances.push_back(meteorInstance);
+
+      uploadInstances(meteorInstances);
+      drawInstancedModel(asteroidModel, 1);
+    }
   }
 
   glBindVertexArray(0);

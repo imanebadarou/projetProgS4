@@ -4,6 +4,7 @@
 #include "game_mode.hpp"
 #include "pieces/piece.hpp"
 #include "probability_distribution/continuous_uniform_distribution.hpp"
+#include "probability_distribution/exponential_distribution.hpp"
 #include "probability_distribution/geometric_promotion_distribution.hpp"
 #include "probability_distribution/random_permutation_distribution.hpp"
 #include "random.hpp"
@@ -29,6 +30,10 @@ public:
   double getLastPromotionTime() const { return last_promotion_time; }
   bool hasRandomPromotionOccurred() const { return last_promotion_pos.x != -1; }
   double sampleMoveSpeedFactor() const;
+  bool hasMeteoriteEvent() const { return meteor_position.x != -1; }
+  coords getMeteoritePosition() const { return meteor_position; }
+  double getMeteoriteStartTime() const { return meteor_start_time; }
+  void updateMeteoriteEvents();
 
   // Setters
   void setCurrentTurn(Color color) { current_turn = color; }
@@ -44,9 +49,13 @@ private:
   ContinuousUniformDistribution move_speed_distribution;
   GeometricPromotionDistribution geometric_promotion_distribution;
   RandomPermutationDistribution random_permutation_distribution;
+  ExponentialDistribution exponential_distribution;
   int moves_until_random_promotion = 1;
   coords last_promotion_pos{-1, -1};
   double last_promotion_time = 0.0;
+  coords meteor_position{-1, -1};
+  double meteor_start_time = -1.0;
+  double meteor_next_event_time = 0.0;
 
   void checkKingCapture(Piece const *captured);
   void applyRandomStartPermutationIfNeeded();

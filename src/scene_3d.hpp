@@ -74,6 +74,7 @@ private:
   Mesh skyboxMesh;
   GLuint skyboxTexture{0};
   std::map<std::string, GpuModel> pieceModels;
+  GpuModel asteroidModel;
 
   void initMesh(Mesh &mesh, const std::vector<float> &vertices,
                 const std::vector<unsigned int> &indices);

@@ -7,6 +7,7 @@
 #include "pieces/queen.hpp"
 #include "pieces/rook.hpp"
 
+#include <GLFW/glfw3.h>
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -15,6 +16,8 @@ GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
   game_mode = GameModeManager::getInstance().getGameMode();
   applyRandomStartPermutationIfNeeded();
   resetRandomPromotionCountdown();
+  meteor_next_event_time =
+      glfwGetTime() + exponential_distribution.sample(random_manager);
 }
 
 double GameLogic::sampleMoveSpeedFactor() const {
@@ -34,6 +37,7 @@ bool GameLogic::makeMove(coords from, coords to) {
   board.movePiece(from, to);
 
   applyRandomPromotionIfNeeded();
+  updateMeteoriteEvents();
 
   // Switch turn
   current_turn = (current_turn == Color::white) ? Color::black : Color::white;
@@ -76,6 +80,10 @@ void GameLogic::resetGame() {
   applyRandomStartPermutationIfNeeded();
   last_promotion_pos = {-1, -1};
   last_promotion_time = 0.0;
+  meteor_position = {-1, -1};
+  meteor_start_time = -1.0;
+  meteor_next_event_time =
+      glfwGetTime() + exponential_distribution.sample(random_manager);
   resetRandomPromotionCountdown();
 }
 
@@ -85,6 +93,10 @@ void GameLogic::setGameMode(GameMode mode) {
   applyRandomStartPermutationIfNeeded();
   last_promotion_pos = {-1, -1};
   last_promotion_time = 0.0;
+  meteor_position = {-1, -1};
+  meteor_start_time = -1.0;
+  meteor_next_event_time =
+      glfwGetTime() + exponential_distribution.sample(random_manager);
   resetRandomPromotionCountdown();
 }
 
@@ -157,4 +169,35 @@ void GameLogic::promoteRandomPawnToQueen() {
       std::chrono::duration<double>(
           std::chrono::high_resolution_clock::now().time_since_epoch())
           .count();
+}
+
+void GameLogic::updateMeteoriteEvents() {
+  if (game_mode != GameMode::RANDOM) {
+    meteor_position = {-1, -1};
+    return;
+  }
+
+  const double current_time = glfwGetTime();
+
+  if (meteor_position.x != -1) {
+    constexpr double meteorite_duration = 3.0;
+    if (current_time >= meteor_start_time + meteorite_duration) {
+      board.removePiece(meteor_position);
+      meteor_position = {-1, -1};
+      meteor_start_time = -1.0;
+      meteor_next_event_time =
+          current_time + exponential_distribution.sample(random_manager);
+    }
+
+    return;
+  }
+
+  if (current_time >= meteor_next_event_time) {
+    const int random_x =
+        static_cast<int>(random_manager.generateUniform() * 8.0);
+    const int random_y =
+        static_cast<int>(random_manager.generateUniform() * 8.0);
+    meteor_position = {random_x, random_y};
+    meteor_start_time = current_time;
+  }
 }

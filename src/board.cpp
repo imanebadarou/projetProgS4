@@ -56,6 +56,10 @@ void Board::movePiece(coords from, coords to) {
   _boardPos[from.x][from.y] = nullptr;
 }
 
+void Board::removePiece(coords position) {
+  _boardPos[position.x][position.y] = nullptr;
+}
+
 void Board::promotePawn(coords position, std::string const &pieceType,
                         Color color) {
   if (pieceType == "queen") {
