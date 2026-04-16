@@ -1,4 +1,5 @@
 #include "game_logic.hpp"
+#include "game_mode_manager.hpp"
 #include "pieces/bishop.hpp"
 #include "pieces/king.hpp"
 #include "pieces/knight.hpp"
@@ -6,7 +7,10 @@
 #include "pieces/queen.hpp"
 #include "pieces/rook.hpp"
 
-GameLogic::GameLogic() : current_turn(Color::white), winner(0) {}
+
+GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
+  game_mode = GameModeManager::getInstance().getGameMode();
+}
 
 bool GameLogic::makeMove(coords from, coords to) {
   // Check if there's a piece at destination (capture)
@@ -53,4 +57,5 @@ void GameLogic::resetGame() {
   board = Board();
   current_turn = Color::white;
   winner = 0;
+  game_mode = GameModeManager::getInstance().getGameMode();
 }
