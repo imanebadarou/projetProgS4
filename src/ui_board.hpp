@@ -7,7 +7,6 @@
 #include <array>
 #include <vector>
 
-
 class UIBoard {
 public:
   UIBoard(GameLogic &game, TextureManager &textures);
@@ -51,7 +50,10 @@ private:
 
   void syncPieceViewCamera();
 
+  double last_notification_time = -10.0;
+
   // L'ancienne grille 2D
   void drawBoardGrid();
   void renderSquare(int x, int y, bool isSelected, bool isValidMove);
+  void drawSurprisePromotionNotification();
 };

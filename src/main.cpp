@@ -9,7 +9,6 @@
 #include "texture_manager.hpp"
 #include "ui_board.hpp"
 
-
 int main() {
   GameLogic game;
   TextureManager textureManager;
@@ -34,6 +33,7 @@ int main() {
                if (modeSelector.render()) {
                  const GameMode selected_mode = modeSelector.getSelectedMode();
                  GameModeManager::getInstance().setGameMode(selected_mode);
+                 game.setGameMode(selected_mode);
 
                  if (selected_mode == GameMode::RANDOM) {
                    const double random_01 = randomManager.generateUniform();

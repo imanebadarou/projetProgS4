@@ -1,7 +1,9 @@
 #include "ui_board.hpp"
 #include <GLFW/glfw3.h> // For button constants
+#include <chrono>
 #include <cstdint>
 #include <imgui.h>
+#include <string>
 
 UIBoard::UIBoard(GameLogic &game, TextureManager &textures)
     : game(game), textures(textures) {}
@@ -15,14 +17,16 @@ void UIBoard::syncPieceViewCamera() {
     return;
   }
 
-  // Si une animation est en cours et concerne notre ancre ou notre sélection, on la suit
+  // Si une animation est en cours et concerne notre ancre ou notre sélection,
+  // on la suit
   if (scene3d.isAnimationActive()) {
-      glm::vec3 animatedPos;
-      // On vérifie si la source de l'animation correspond à notre ancienne ancre
-      if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor, animatedPos)) {
-          camera.setSubjectivePosition(animatedPos + glm::vec3(0.0f, 1.35f, 0.0f));
-          return;
-      }
+    glm::vec3 animatedPos;
+    // On vérifie si la source de l'animation correspond à notre ancienne ancre
+    if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor,
+                                                   animatedPos)) {
+      camera.setSubjectivePosition(animatedPos + glm::vec3(0.0f, 1.35f, 0.0f));
+      return;
+    }
   }
 
   if (selected_piece.x == -1) {
@@ -39,7 +43,7 @@ void UIBoard::syncPieceViewCamera() {
   }
 
   const bool selectionChanged = piece_view_anchor.x != selected_piece.x ||
-                                 piece_view_anchor.y != selected_piece.y;
+                                piece_view_anchor.y != selected_piece.y;
 
   if (camera.getMode() != CameraMode::FirstPerson || selectionChanged) {
     const float yaw = (selected->getColor() == Color::white) ? 0.0f : 180.0f;
@@ -198,6 +202,7 @@ void UIBoard::render() {
   }
 
   drawPromotionModal();
+  drawSurprisePromotionNotification();
 }
 
 void UIBoard::drawBoardGrid() {
@@ -303,18 +308,19 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
     scene3d.pushAnimation(selected_piece, position);
 
     game.makeMove(selected_piece, position);
-    
-    // Si on est en "Vue Pièce", on veut rester attaché à la pièce qu'on vient de bouger.
-    // On met à jour selected_piece vers la destination au lieu de la reset à -1.
+
+    // Si on est en "Vue Pièce", on veut rester attaché à la pièce qu'on vient
+    // de bouger. On met à jour selected_piece vers la destination au lieu de la
+    // reset à -1.
     if (piece_view_enabled) {
-        selected_piece = position;
+      selected_piece = position;
     } else {
-        selected_piece = {-1, -1};
+      selected_piece = {-1, -1};
     }
-    
+
     valid_moves.clear();
 
-    if (!game.isGameOver() && is_pawn && 
+    if (!game.isGameOver() && is_pawn &&
         ((piece_color == Color::white && position.x == 7) ||
          (piece_color == Color::black && position.x == 0))) {
       promotion_modal_open = true;
@@ -398,5 +404,48 @@ void UIBoard::drawPromotionModal() {
     }
 
     ImGui::EndPopup();
+  }
+}
+
+void UIBoard::drawSurprisePromotionNotification() {
+  // Check if a promotion just occurred
+  if (!game.hasRandomPromotionOccurred()) {
+    return;
+  }
+
+  const double current_time =
+      std::chrono::duration<double>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
+  const double time_since_promotion =
+      current_time - game.getLastPromotionTime();
+
+  // Display notification for 5 seconds
+  if (time_since_promotion > 5.0) {
+    return;
+  }
+
+  // Fade out effect: gradually decrease opacity in the last 2 seconds
+  float alpha = 1.0f;
+  if (time_since_promotion > 3.0) {
+    alpha = 1.0f - static_cast<float>((time_since_promotion - 3.0) / 2.0);
+  }
+
+  ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, 100),
+                          ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+
+  ImGui::SetNextWindowBgAlpha(alpha * 0.9f);
+
+  if (ImGui::Begin("SurprisePromotion", nullptr,
+                   ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove |
+                       ImGuiWindowFlags_NoInputs |
+                       ImGuiWindowFlags_NoSavedSettings)) {
+    ImGui::TextColored(ImVec4(1.0f, 0.843f, 0.0f, alpha),
+                       "🎉 PROMOTION SURPRISE ! 🎉");
+
+    ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, alpha),
+                       "Un pion est devenu une reine !");
+
+    ImGui::End();
   }
 }
