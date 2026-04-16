@@ -36,6 +36,8 @@ Scene3D::~Scene3D() {
     glDeleteProgram(shaderProgram);
   if (skyboxShader)
     glDeleteProgram(skyboxShader);
+  if (pieceShader)
+    glDeleteProgram(pieceShader);
   if (fbo)
     glDeleteFramebuffers(1, &fbo);
   if (textureColorBuffer)
@@ -66,7 +68,18 @@ void Scene3D::init() {
   uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
 
   glGenBuffers(1, &instanceVbo);
-  uniforms.isPiece = glGetUniformLocation(shaderProgram, "isPiece");
+  
+  pieceShader = createProgramFromFiles(pieceVertexShaderPath, pieceFragmentShaderPath);
+  pieceUniforms.model = glGetUniformLocation(pieceShader, "model");
+  pieceUniforms.view = glGetUniformLocation(pieceShader, "view");
+  pieceUniforms.projection = glGetUniformLocation(pieceShader, "projection");
+  pieceUniforms.color = glGetUniformLocation(pieceShader, "color");
+  pieceUniforms.viewPos = glGetUniformLocation(pieceShader, "viewPos");
+  pieceUniforms.dirLightDir = glGetUniformLocation(pieceShader, "dirLightDir");
+  pieceUniforms.dirLightColor = glGetUniformLocation(pieceShader, "dirLightColor");
+  pieceUniforms.ambientStrength = glGetUniformLocation(pieceShader, "ambientStrength");
+  pieceUniforms.pointLightPos = glGetUniformLocation(pieceShader, "pointLightPos");
+  pieceUniforms.pointLightColor = glGetUniformLocation(pieceShader, "pointLightColor");
 
   const std::vector<float> vertices = {
       // positions          // normals
@@ -439,6 +452,16 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
   drawInstancedMesh(cubeMesh, static_cast<GLsizei>(boardInstances.size()));
 
   glUniform1i(uniforms.isPiece, 1);
+  glUseProgram(pieceShader);
+  glUniformMatrix4fv(pieceUniforms.projection, 1, GL_FALSE, glm::value_ptr(projection));
+  glUniformMatrix4fv(pieceUniforms.view, 1, GL_FALSE, glm::value_ptr(view));
+  glUniform3fv(pieceUniforms.viewPos, 1, glm::value_ptr(camera.getPosition()));
+  glUniform3fv(pieceUniforms.dirLightDir, 1, glm::value_ptr(dirLightDir));
+  glUniform3fv(pieceUniforms.dirLightColor, 1, glm::value_ptr(dirLightColor));
+  glUniform1f(pieceUniforms.ambientStrength, ambientStrength);
+  glUniform3fv(pieceUniforms.pointLightPos, 1, glm::value_ptr(pointLightPos));
+  glUniform3fv(pieceUniforms.pointLightColor, 1, glm::value_ptr(pointLightColor));
+
   for (auto &batch : pieceBatches) {
     auto modelIt = pieceModels.find(batch.first);
     if (modelIt == pieceModels.end() || batch.second.empty()) {

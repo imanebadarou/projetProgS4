@@ -314,8 +314,9 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
     
     valid_moves.clear();
 
-    if (is_pawn && ((piece_color == Color::white && position.x == 7) ||
-                    (piece_color == Color::black && position.x == 0))) {
+    if (!game.isGameOver() && is_pawn && 
+        ((piece_color == Color::white && position.x == 7) ||
+         (piece_color == Color::black && position.x == 0))) {
       promotion_modal_open = true;
       promotion_pos = position;
       promotion_color = piece_color;

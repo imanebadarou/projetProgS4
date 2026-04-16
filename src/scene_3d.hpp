@@ -64,10 +64,11 @@ private:
     GLint pointLightPos{-1};
     GLint pointLightColor{-1};
     GLint isPiece{-1};
-  } uniforms;
+  } uniforms, pieceUniforms;
 
   GLuint shaderProgram{0};
   GLuint skyboxShader{0};
+  GLuint pieceShader{0};
   GLuint instanceVbo{0};
   Mesh cubeMesh;
   Mesh skyboxMesh;
@@ -89,4 +90,6 @@ private:
   const std::string fragmentShaderPath = "../../assets/shaders/shader.fs.glsl";
   const std::string skyboxVertexShaderPath = "../../assets/shaders/skybox.vs.glsl";
   const std::string skyboxFragmentShaderPath = "../../assets/shaders/skybox.fs.glsl";
+  const std::string pieceVertexShaderPath = "../../assets/shaders/piece.vs.glsl";
+  const std::string pieceFragmentShaderPath = "../../assets/shaders/piece.fs.glsl";
 };
