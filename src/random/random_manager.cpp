@@ -1,11 +1,10 @@
-#include "random.hpp"
+#include "random_manager.hpp"
 
 #include <random>
 
 double RandomManager::generateUniform() const {
-  std::random_device rd{};
-  std::mt19937 gen(rd());
   std::uniform_real_distribution<> dist(0.0, 1.0);
+  static std::mt19937 gen{std::random_device{}()};
   return dist(gen);
 }
 

@@ -165,18 +165,18 @@ void Scene3D::init() {
       std::string key = color + "-" + name;
       std::string path = "../../assets/3Dmodels/" + key + ".obj";
 
-      ModelData data = loadOBJ(path);
-      if (data.vertexCount > 0) {
+      auto data = loadOBJ(path);
+      if (data && data->vertexCount > 0) {
         GpuModel gpu;
-        gpu.vertexCount = data.vertexCount;
+        gpu.vertexCount = data->vertexCount;
 
         glGenVertexArrays(1, &gpu.vao);
         glGenBuffers(1, &gpu.vbo);
 
         glBindVertexArray(gpu.vao);
         glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-        glBufferData(GL_ARRAY_BUFFER, data.vertices.size() * sizeof(float),
-                     data.vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, data->vertices.size() * sizeof(float),
+                     data->vertices.data(), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
                               (void *)0);
@@ -197,18 +197,17 @@ void Scene3D::init() {
   }
 
   // Load asteroid model
-  ModelData asteroidData =
-      loadOBJ("../../assets/3Dmodels/Rocky_Asteroid_4.obj");
-  if (asteroidData.vertexCount > 0) {
-    asteroidModel.vertexCount = asteroidData.vertexCount;
+  auto asteroidData = loadOBJ("../../assets/3Dmodels/Rocky_Asteroid_4.obj");
+  if (asteroidData && asteroidData->vertexCount > 0) {
+    asteroidModel.vertexCount = asteroidData->vertexCount;
 
     glGenVertexArrays(1, &asteroidModel.vao);
     glGenBuffers(1, &asteroidModel.vbo);
 
     glBindVertexArray(asteroidModel.vao);
     glBindBuffer(GL_ARRAY_BUFFER, asteroidModel.vbo);
-    glBufferData(GL_ARRAY_BUFFER, asteroidData.vertices.size() * sizeof(float),
-                 asteroidData.vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, asteroidData->vertices.size() * sizeof(float),
+                 asteroidData->vertices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
                           (void *)0);
@@ -540,31 +539,33 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
     const double meteorite_duration = 3.0; // seconds to fall
 
     if (time_since_event < meteorite_duration) {
-      const coords meteor_pos = game.getMeteoritePosition();
-      const float fall_progress =
-          static_cast<float>(time_since_event / meteorite_duration);
-      const float start_height = 10.0f;
-      const float end_height = 0.4f;
-      const float current_height =
-          start_height + (end_height - start_height) * fall_progress;
+      const std::optional<coords> meteor_pos = game.getMeteoritePosition();
+      if (meteor_pos.has_value()) {
+        const float fall_progress =
+            static_cast<float>(time_since_event / meteorite_duration);
+        const float start_height = 10.0f;
+        const float end_height = 0.4f;
+        const float current_height =
+            start_height + (end_height - start_height) * fall_progress;
 
-      glm::mat4 meteorModel = glm::translate(
-          glm::mat4(1.0f),
-          glm::vec3(static_cast<float>(meteor_pos.x), current_height,
-                    static_cast<float>(meteor_pos.y)));
-      meteorModel = glm::scale(meteorModel, glm::vec3(0.8f, 0.8f, 0.8f));
-      meteorModel =
-          glm::rotate(meteorModel, static_cast<float>(time_since_event),
-                      glm::vec3(1.0f, 1.0f, 0.0f));
+        glm::mat4 meteorModel = glm::translate(
+            glm::mat4(1.0f),
+            glm::vec3(static_cast<float>(meteor_pos->x), current_height,
+                      static_cast<float>(meteor_pos->y)));
+        meteorModel = glm::scale(meteorModel, glm::vec3(0.8f, 0.8f, 0.8f));
+        meteorModel =
+            glm::rotate(meteorModel, static_cast<float>(time_since_event),
+                        glm::vec3(1.0f, 1.0f, 0.0f));
 
-      std::vector<InstanceData> meteorInstances;
-      InstanceData meteorInstance;
-      meteorInstance.model = meteorModel;
-      meteorInstance.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Black
-      meteorInstances.push_back(meteorInstance);
+        std::vector<InstanceData> meteorInstances;
+        InstanceData meteorInstance;
+        meteorInstance.model = meteorModel;
+        meteorInstance.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Black
+        meteorInstances.push_back(meteorInstance);
 
-      uploadInstances(meteorInstances);
-      drawInstancedModel(asteroidModel, 1);
+        uploadInstances(meteorInstances);
+        drawInstancedModel(asteroidModel, 1);
+      }
     }
   }
 

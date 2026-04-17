@@ -1,5 +1,12 @@
 #include "board.hpp"
 
+#include "pieces/bishop.hpp"
+#include "pieces/king.hpp"
+#include "pieces/knight.hpp"
+#include "pieces/pawn.hpp"
+#include "pieces/queen.hpp"
+#include "pieces/rook.hpp"
+
 namespace {
 
 constexpr std::array<int, 8> kClassicBackRank = {0, 1, 2, 3, 4, 2, 1, 0};
@@ -60,17 +67,23 @@ void Board::removePiece(coords position) {
   _boardPos[position.x][position.y] = nullptr;
 }
 
-void Board::promotePawn(coords position, std::string const &pieceType,
+bool Board::promotePawn(coords position, std::string const &pieceType,
                         Color color) {
   if (pieceType == "queen") {
     _boardPos[position.x][position.y] = std::make_unique<Queen>(color);
+    return true;
   } else if (pieceType == "rook") {
     _boardPos[position.x][position.y] = std::make_unique<Rook>(color);
+    return true;
   } else if (pieceType == "bishop") {
     _boardPos[position.x][position.y] = std::make_unique<Bishop>(color);
+    return true;
   } else if (pieceType == "knight") {
     _boardPos[position.x][position.y] = std::make_unique<Knight>(color);
+    return true;
   }
+
+  return false;
 }
 
 void Board::setBackRankFromPermutation(std::array<int, 8> const &permutation) {

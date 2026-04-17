@@ -13,15 +13,15 @@
 #include <vector>
 
 GameLogic::GameLogic() : current_turn(Color::white), winner(0) {
-  game_mode = GameModeManager::getInstance().getGameMode();
-  applyRandomStartPermutationIfNeeded();
-  resetRandomPromotionCountdown();
-  meteor_next_event_time =
-      glfwGetTime() + exponential_distribution.sample(random_manager);
+  resetGameState();
+}
+
+GameMode GameLogic::getGameMode() const {
+  return GameModeManager::getInstance().getGameMode();
 }
 
 double GameLogic::sampleMoveSpeedFactor() const {
-  if (game_mode != GameMode::RANDOM) {
+  if (getGameMode() != GameMode::RANDOM) {
     return 1.0;
   }
 
@@ -72,28 +72,21 @@ void GameLogic::checkKingCapture(Piece const *captured) {
   }
 }
 
-void GameLogic::resetGame() {
+void GameLogic::resetGame() { resetGameState(); }
+
+void GameLogic::setGameMode(GameMode mode) {
+  GameModeManager::getInstance().setGameMode(mode);
+  resetGameState();
+}
+
+void GameLogic::resetGameState() {
   board = Board();
   current_turn = Color::white;
   winner = 0;
-  game_mode = GameModeManager::getInstance().getGameMode();
   applyRandomStartPermutationIfNeeded();
-  last_promotion_pos = {-1, -1};
+  last_promotion_pos = std::nullopt;
   last_promotion_time = 0.0;
-  meteor_position = {-1, -1};
-  meteor_start_time = -1.0;
-  meteor_next_event_time =
-      glfwGetTime() + exponential_distribution.sample(random_manager);
-  resetRandomPromotionCountdown();
-}
-
-void GameLogic::setGameMode(GameMode mode) {
-  game_mode = mode;
-  board = Board();
-  applyRandomStartPermutationIfNeeded();
-  last_promotion_pos = {-1, -1};
-  last_promotion_time = 0.0;
-  meteor_position = {-1, -1};
+  meteor_position = std::nullopt;
   meteor_start_time = -1.0;
   meteor_next_event_time =
       glfwGetTime() + exponential_distribution.sample(random_manager);
@@ -101,7 +94,7 @@ void GameLogic::setGameMode(GameMode mode) {
 }
 
 void GameLogic::applyRandomStartPermutationIfNeeded() {
-  if (game_mode != GameMode::RANDOM) {
+  if (getGameMode() != GameMode::RANDOM) {
     return;
   }
 
@@ -117,7 +110,7 @@ void GameLogic::resetRandomPromotionCountdown() {
 }
 
 void GameLogic::applyRandomPromotionIfNeeded() {
-  if (game_mode != GameMode::RANDOM || isGameOver()) {
+  if (getGameMode() != GameMode::RANDOM || isGameOver()) {
     return;
   }
 
@@ -172,18 +165,18 @@ void GameLogic::promoteRandomPawnToQueen() {
 }
 
 void GameLogic::updateMeteoriteEvents() {
-  if (game_mode != GameMode::RANDOM) {
-    meteor_position = {-1, -1};
+  if (getGameMode() != GameMode::RANDOM) {
+    meteor_position = std::nullopt;
     return;
   }
 
   const double current_time = glfwGetTime();
 
-  if (meteor_position.x != -1) {
+  if (meteor_position.has_value()) {
     constexpr double meteorite_duration = 3.0;
     if (current_time >= meteor_start_time + meteorite_duration) {
-      board.removePiece(meteor_position);
-      meteor_position = {-1, -1};
+      board.removePiece(*meteor_position);
+      meteor_position = std::nullopt;
       meteor_start_time = -1.0;
       meteor_next_event_time =
           current_time + exponential_distribution.sample(random_manager);
@@ -197,7 +190,7 @@ void GameLogic::updateMeteoriteEvents() {
         static_cast<int>(random_manager.generateUniform() * 8.0);
     const int random_y =
         static_cast<int>(random_manager.generateUniform() * 8.0);
-    meteor_position = {random_x, random_y};
+    meteor_position = coords{random_x, random_y};
     meteor_start_time = current_time;
   }
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "random.hpp"
+#include "random/random_manager.hpp"
 
 #include <array>
 

@@ -1,13 +1,11 @@
 #include "game_logic.hpp"
-#include "game_mode_manager.hpp"
-#include "glm/fwd.hpp"
-#include "glm/glm.hpp"
 #include "mode_selector.hpp"
-#include "probability_distribution/starting_player_policy.hpp"
 #include "quick_imgui/quick_imgui.hpp"
-#include "random.hpp"
+#include "random/policies/starting_player_policy.hpp"
+#include "random/random_manager.hpp"
 #include "texture_manager.hpp"
 #include "ui_board.hpp"
+
 
 int main() {
   GameLogic game;
@@ -32,7 +30,6 @@ int main() {
              if (show_mode_selector) {
                if (modeSelector.render()) {
                  const GameMode selected_mode = modeSelector.getSelectedMode();
-                 GameModeManager::getInstance().setGameMode(selected_mode);
                  game.setGameMode(selected_mode);
 
                  if (selected_mode == GameMode::RANDOM) {

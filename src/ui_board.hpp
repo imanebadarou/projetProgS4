@@ -5,6 +5,7 @@
 #include "scene_3d.hpp"
 #include "texture_manager.hpp"
 #include <array>
+#include <optional>
 #include <vector>
 
 class UIBoard {
@@ -29,11 +30,11 @@ private:
   Scene3D scene3d;
 
   std::vector<std::array<int, 2>> valid_moves;
-  coords selected_piece{-1, -1};
-  coords hovered_piece{-1, -1};
+  std::optional<coords> selected_piece;
+  std::optional<coords> hovered_piece;
 
   bool promotion_modal_open{false};
-  coords promotion_pos{-1, -1};
+  std::optional<coords> promotion_pos;
   Color promotion_color{Color::white};
 
   int window_width{800}, window_height{800};
@@ -46,7 +47,7 @@ private:
   bool show_2d{true};
   bool show_3d{true};
   bool piece_view_enabled{false};
-  coords piece_view_anchor{-1, -1};
+  std::optional<coords> piece_view_anchor;
 
   void syncPieceViewCamera();
 

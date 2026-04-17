@@ -1,17 +1,9 @@
 #pragma once
-#include "pieces/bishop.hpp"
-#include "pieces/king.hpp"
-#include "pieces/knight.hpp"
-#include "pieces/pawn.hpp"
-// #include "pieces/piece.hpp"
-#include "pieces/queen.hpp"
-#include "pieces/rook.hpp"
 #include "utils.hpp"
 
 #include <array>
 #include <memory>
 #include <string>
-
 
 class Piece;
 
@@ -24,6 +16,6 @@ public:
   Piece const *getPieceFromPos(coords position) const;
   void movePiece(coords from, coords to);
   void removePiece(coords position);
-  void promotePawn(coords position, std::string const &pieceType, Color color);
+  bool promotePawn(coords position, std::string const &pieceType, Color color);
   void setBackRankFromPermutation(std::array<int, 8> const &permutation);
 };

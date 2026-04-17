@@ -13,44 +13,44 @@ void UIBoard::init3D() { scene3d.init(); }
 void UIBoard::syncPieceViewCamera() {
   if (!piece_view_enabled) {
     camera.setMode(CameraMode::Trackball);
-    piece_view_anchor = {-1, -1};
+    piece_view_anchor = std::nullopt;
     return;
   }
 
   // Si une animation est en cours et concerne notre ancre ou notre sélection,
   // on la suit
-  if (scene3d.isAnimationActive()) {
+  if (scene3d.isAnimationActive() && piece_view_anchor.has_value()) {
     glm::vec3 animatedPos;
     // On vérifie si la source de l'animation correspond à notre ancienne ancre
-    if (scene3d.getAnimatedWorldPositionFromSource(piece_view_anchor,
+    if (scene3d.getAnimatedWorldPositionFromSource(*piece_view_anchor,
                                                    animatedPos)) {
       camera.setSubjectivePosition(animatedPos + glm::vec3(0.0f, 1.35f, 0.0f));
       return;
     }
   }
 
-  if (selected_piece.x == -1) {
+  if (!selected_piece.has_value()) {
     camera.setMode(CameraMode::Trackball);
-    piece_view_anchor = {-1, -1};
+    piece_view_anchor = std::nullopt;
     return;
   }
 
-  Piece const *selected = game.getBoard().getPieceFromPos(selected_piece);
+  Piece const *selected = game.getBoard().getPieceFromPos(*selected_piece);
   if (!selected) {
     camera.setMode(CameraMode::Trackball);
-    piece_view_anchor = {-1, -1};
+    piece_view_anchor = std::nullopt;
     return;
   }
 
-  const bool selectionChanged = piece_view_anchor.x != selected_piece.x ||
-                                piece_view_anchor.y != selected_piece.y;
+  const bool selectionChanged = piece_view_anchor != selected_piece;
 
   if (camera.getMode() != CameraMode::FirstPerson || selectionChanged) {
     const float yaw = (selected->getColor() == Color::white) ? 0.0f : 180.0f;
     const float pitch = -25.0f;
 
     camera.setSubjectivePosition(
-        glm::vec3((float)selected_piece.x, 1.75f, (float)selected_piece.y));
+        glm::vec3(static_cast<float>(selected_piece->x), 1.75f,
+                  static_cast<float>(selected_piece->y)));
     camera.setSubjectiveOrientation(yaw, pitch);
     camera.setMode(CameraMode::FirstPerson);
     piece_view_anchor = selected_piece;
@@ -87,12 +87,12 @@ void UIBoard::emitRaycastLocal(float local_x, float local_y, float width,
       int gridX = std::round(p.x);
       int gridZ = std::round(p.z);
       if (gridX >= 0 && gridX < 8 && gridZ >= 0 && gridZ < 8) {
-        hovered_piece = {gridX, gridZ};
+        hovered_piece = coords{gridX, gridZ};
         return;
       }
     }
   }
-  hovered_piece = {-1, -1};
+  hovered_piece = std::nullopt;
 }
 
 void UIBoard::render() {
@@ -104,9 +104,10 @@ void UIBoard::render() {
     if (avail.x > 0 && avail.y > 0) {
       syncPieceViewCamera();
 
-      GLuint tex =
-          scene3d.renderToTexture(camera, avail.x, avail.y, game, hovered_piece,
-                                  selected_piece, valid_moves);
+      GLuint tex = scene3d.renderToTexture(
+          camera, avail.x, avail.y, game,
+          hovered_piece.value_or(coords{-1, -1}),
+          selected_piece.value_or(coords{-1, -1}), valid_moves);
 
       ImGui::Image((ImTextureID)(intptr_t)tex, avail, ImVec2(0, 1),
                    ImVec2(1, 0));
@@ -121,8 +122,8 @@ void UIBoard::render() {
         emitRaycastLocal(local_x, local_y, avail.x, avail.y);
 
         if (ImGui::IsMouseClicked(0)) {
-          if (hovered_piece.x != -1)
-            handleSquareClick(hovered_piece, false);
+          if (hovered_piece.has_value())
+            handleSquareClick(*hovered_piece, false);
         } else if (ImGui::IsMouseClicked(1) && !piece_view_enabled) {
           handleSquareClick({-1, -1}, true);
         }
@@ -144,7 +145,7 @@ void UIBoard::render() {
           camera.zoomTrackball(scroll * 0.5f);
         }
       } else {
-        hovered_piece = {-1, -1};
+        hovered_piece = std::nullopt;
       }
     }
     ImGui::End();
@@ -168,7 +169,7 @@ void UIBoard::render() {
                                   : (int)CameraMode::Trackball;
     if (ImGui::RadioButton("Trackball", mode == (int)CameraMode::Trackball)) {
       piece_view_enabled = false;
-      piece_view_anchor = {-1, -1};
+      piece_view_anchor = std::nullopt;
       camera.setMode(CameraMode::Trackball);
     }
     ImGui::SameLine();
@@ -177,7 +178,7 @@ void UIBoard::render() {
       syncPieceViewCamera();
     }
 
-    if (piece_view_enabled && selected_piece.x == -1) {
+    if (piece_view_enabled && !selected_piece.has_value()) {
       ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "Sélectionnez une pièce !");
     }
 
@@ -211,7 +212,8 @@ void UIBoard::drawBoardGrid() {
 
   for (int x = 7; x >= 0; --x) {
     for (int y = 0; y < 8; ++y) {
-      bool isSelected = (selected_piece.x == x && selected_piece.y == y);
+      bool isSelected = selected_piece.has_value() && selected_piece->x == x &&
+                        selected_piece->y == y;
       bool isValidMove = false;
 
       for (const auto &move : valid_moves) {
@@ -282,7 +284,7 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
     return;
 
   if (isRightClick) {
-    selected_piece = {-1, -1};
+    selected_piece = std::nullopt;
     valid_moves.clear();
     syncPieceViewCamera();
     return;
@@ -297,7 +299,9 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
   }
 
   if (isValidMove) {
-    Piece const *moving_piece = game.getBoard().getPieceFromPos(selected_piece);
+    Piece const *moving_piece =
+        selected_piece ? game.getBoard().getPieceFromPos(*selected_piece)
+                       : nullptr;
     bool is_pawn = false;
     Color piece_color = Color::white;
     if (moving_piece) {
@@ -305,10 +309,10 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       piece_color = moving_piece->getColor();
     }
 
-    scene3d.pushAnimation(selected_piece, position,
+    scene3d.pushAnimation(*selected_piece, position,
                           game.sampleMoveSpeedFactor());
 
-    game.makeMove(selected_piece, position);
+    game.makeMove(*selected_piece, position);
 
     // Si on est en "Vue Pièce", on veut rester attaché à la pièce qu'on vient
     // de bouger. On met à jour selected_piece vers la destination au lieu de la
@@ -316,7 +320,7 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
     if (piece_view_enabled) {
       selected_piece = position;
     } else {
-      selected_piece = {-1, -1};
+      selected_piece = std::nullopt;
     }
 
     valid_moves.clear();
@@ -334,7 +338,7 @@ void UIBoard::handleSquareClick(coords position, bool isRightClick) {
       selected_piece = position;
       valid_moves = p->whereCanIMove(game.getBoard(), position);
     } else {
-      selected_piece = {-1, -1};
+      selected_piece = std::nullopt;
       valid_moves.clear();
     }
   }
@@ -356,7 +360,7 @@ void UIBoard::drawGameOverWindow() {
   ImGui::Spacing();
   if (ImGui::Button("Play Again", ImVec2(120, 30))) {
     game.resetGame();
-    selected_piece = {-1, -1};
+    selected_piece = std::nullopt;
     valid_moves.clear();
     promotion_modal_open = false;
   }
@@ -397,8 +401,12 @@ void UIBoard::drawPromotionModal() {
     }
 
     if (!chosen_piece.empty()) {
-      game.getBoard().promotePawn(promotion_pos, chosen_piece, promotion_color);
+      if (promotion_pos.has_value()) {
+        game.getBoard().promotePawn(*promotion_pos, chosen_piece,
+                                    promotion_color);
+      }
       promotion_modal_open = false;
+      promotion_pos = std::nullopt;
       game.setCurrentTurn(game.getCurrentTurn() == Color::white ? Color::black
                                                                 : Color::white);
       ImGui::CloseCurrentPopup();

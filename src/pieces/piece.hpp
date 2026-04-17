@@ -1,10 +1,9 @@
 #pragma once
+#include "utils.hpp"
 #include <array>
 #include <vector>
-#include "utils.hpp"
-class Board;
 
-enum class Color { black, white };
+class Board;
 
 class Piece {
 private:
@@ -22,7 +21,8 @@ public:
   Color getColor() const;
   void setColor();
 
-  virtual std::vector<std::array<int, 2>> whereCanIMove(const Board& board, coords position) const = 0;
+  virtual std::vector<std::array<int, 2>>
+  whereCanIMove(const Board &board, coords position) const = 0;
 
   virtual ~Piece() = default;
 };
