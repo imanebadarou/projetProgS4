@@ -13,7 +13,7 @@ uniform vec3 pointLightPos;
 uniform vec3 pointLightColor;
 uniform vec3 viewPos;
 
-// Pseudo-random noise
+// Bruit pseudo-aleatoire
 float hash(float n) { return fract(sin(n) * 43758.5453123); }
 float noise(vec3 x) {
     vec3 p = floor(x);
@@ -26,7 +26,7 @@ float noise(vec3 x) {
                    mix(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
 }
 
-// Fractal Brownian Motion
+// Mouvement brownien fractal
 float fbm(vec3 p) {
     float f = 0.0;
     f += 0.5000 * noise(p); p = p * 2.02;
@@ -48,7 +48,7 @@ void main() {
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    // Directional light
+    // Lumiere directionnelle
     vec3 ambient = ambientStrength * dirLightColor;
     vec3 lightDir = normalize(-dirLightDir);
     float diff = max(dot(norm, lightDir), 0.0);
@@ -58,7 +58,7 @@ void main() {
     float spec = pow(max(dot(norm, halfwayDir), 0.0), 64.0);
     vec3 specular = 0.8 * spec * dirLightColor;
 
-    // Point light
+    // Lumiere ponctuelle
     vec3 lightDirPt = normalize(pointLightPos - FragPos);
     float diffPt = max(dot(norm, lightDirPt), 0.0);
     float dist = length(pointLightPos - FragPos);
@@ -69,7 +69,7 @@ void main() {
     float specPt = pow(max(dot(norm, halfwayDirPt), 0.0), 128.0);
     vec3 specularPt = 1.0 * specPt * pointLightColor * attenuation;
 
-    // Rim lighting (effet de contour)
+    // Eclairage de contour (effet de silhouette)
     float rimFactor = 1.0 - max(dot(viewDir, norm), 0.0);
     rimFactor = smoothstep(0.5, 1.0, rimFactor);
     vec3 rim = rimFactor * pointLightColor * attenuation * 0.5;

@@ -1,9 +1,8 @@
-#include "obj_loader.hpp"
+#include "rendering/obj_loader.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <vector>
-
 
 std::optional<ModelData> loadOBJ(const std::string &path) {
   ModelData result;
@@ -37,7 +36,7 @@ std::optional<ModelData> loadOBJ(const std::string &path) {
         faceVertices.push_back(vertexData);
       }
 
-      // Triangulate if necessary (fan triangulation)
+      // Triangulation si necessaire (triangulation en eventail)
       for (size_t i = 1; i < faceVertices.size() - 1; ++i) {
         std::string tri[3] = {faceVertices[0], faceVertices[i],
                               faceVertices[i + 1]};

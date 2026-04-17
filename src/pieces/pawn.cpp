@@ -8,13 +8,13 @@ std::vector<std::array<int, 2>> Pawn::whereCanIMove(const Board &board,
   std::vector<std::array<int, 2>> moves;
   int dir = (this->getColor() == Color::white) ? 1 : -1;
 
-  // forward 1
+  // avance de 1
   int nx = position.x + dir;
   int ny = position.y;
   if (nx >= 0 && nx < 8) {
     if (board.getPieceFromPos({nx, ny}) == nullptr) {
       moves.push_back({nx, ny});
-      // forward 2
+      // avance de 2
       if (!this->getHasMoved()) {
         int nx2 = position.x + 2 * dir;
         if (nx2 >= 0 && nx2 < 8 &&
@@ -25,7 +25,7 @@ std::vector<std::array<int, 2>> Pawn::whereCanIMove(const Board &board,
     }
   }
 
-  // capture diagonal
+  // capture en diagonale
   int dys[2] = {-1, 1};
   for (int i = 0; i < 2; ++i) {
     int cx = position.x + dir;

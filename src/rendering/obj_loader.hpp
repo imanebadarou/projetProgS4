@@ -4,10 +4,9 @@
 #include <string>
 #include <vector>
 
-
 struct ModelData {
   std::vector<float>
-      vertices; // Interleaved: pos.x, pos.y, pos.z, norm.x, norm.y, norm.z
+      vertices; // Entrelace : pos.x, pos.y, pos.z, norm.x, norm.y, norm.z
   int vertexCount{0};
 };
 

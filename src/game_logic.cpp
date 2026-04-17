@@ -29,20 +29,20 @@ double GameLogic::sampleMoveSpeedFactor() const {
 }
 
 bool GameLogic::makeMove(coords from, coords to) {
-  // Check if there's a piece at destination (capture)
+  // Verifie s'il y a une piece a la destination (capture)
   Piece const *captured = board.getPieceFromPos(to);
   checkKingCapture(captured);
 
-  // Execute the move
+  // Execute le deplacement
   board.movePiece(from, to);
 
   applyRandomPromotionIfNeeded();
   updateMeteoriteEvents();
 
-  // Switch turn
+  // Change de tour
   current_turn = (current_turn == Color::white) ? Color::black : Color::white;
 
-  return true; // Move successful
+  return true; // Coup execute avec succes
 }
 
 std::string GameLogic::getPieceName(Piece const *piece) {
@@ -67,7 +67,7 @@ std::string GameLogic::getPieceName(Piece const *piece) {
 
 void GameLogic::checkKingCapture(Piece const *captured) {
   if (captured && dynamic_cast<King const *>(captured)) {
-    // King captured - game over
+    // Roi capture - partie terminee
     winner = (captured->getColor() == Color::white) ? 2 : 1;
   }
 }
@@ -156,7 +156,7 @@ void GameLogic::promoteRandomPawnToQueen() {
 
   board.promotePawn(selected, "queen", pawn->getColor());
 
-  // Track the promotion for UI notification
+  // Memorise la promotion pour la notification UI
   last_promotion_pos = selected;
   last_promotion_time =
       std::chrono::duration<double>(

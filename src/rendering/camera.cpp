@@ -1,4 +1,4 @@
-#include "camera.hpp"
+#include "rendering/camera.hpp"
 #include <algorithm>
 
 Camera::Camera() {}

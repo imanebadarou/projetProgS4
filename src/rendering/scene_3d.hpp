@@ -1,8 +1,8 @@
 #pragma once
 
-#include "camera.hpp"
 #include "game_logic.hpp"
-#include "gl_utils.hpp"
+#include "rendering/camera.hpp"
+#include "rendering/gl_utils.hpp"
 #include "utils.hpp"
 #include <array>
 #include <map>

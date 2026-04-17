@@ -1,6 +1,6 @@
-#include "scene_3d.hpp"
-#include "obj_loader.hpp"
-#include "texture_manager.hpp"
+#include "rendering/scene_3d.hpp"
+#include "rendering/obj_loader.hpp"
+#include "rendering/texture_manager.hpp"
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -87,36 +87,36 @@ void Scene3D::init() {
       glGetUniformLocation(pieceShader, "pointLightColor");
 
   const std::vector<float> vertices = {
-      // positions          // normals
-      // back
+      // positions          // normales
+      // arriere
       -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
       -1.0f, 0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, -0.5f, 0.5f, -0.5f, 0.0f,
       0.0f, -1.0f,
-      // front
+      // avant
       -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
       0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-      // left
+      // gauche
       -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, -0.5f, 0.5f, -0.5f, -1.0f, 0.0f,
       0.0f, -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, -0.5f, -0.5f, 0.5f, -1.0f,
       0.0f, 0.0f,
-      // right
+      // droite
       0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
       0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
-      // bottom
+      // dessous
       -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.5f, -0.5f, -0.5f, 0.0f, -1.0f,
       0.0f, 0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, -0.5f, -0.5f, 0.5f, 0.0f,
       -1.0f, 0.0f,
-      // top
+      // dessus
       -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
       0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f};
 
   const std::vector<unsigned int> indices = {
-      0,  1,  2,  2,  3,  0,  // back
-      4,  5,  6,  6,  7,  4,  // front
-      8,  9,  10, 10, 11, 8,  // left
-      12, 13, 14, 14, 15, 12, // right
-      16, 17, 18, 18, 19, 16, // bottom
-      20, 21, 22, 22, 23, 20  // top
+      0,  1,  2,  2,  3,  0,  // arriere
+      4,  5,  6,  6,  7,  4,  // avant
+      8,  9,  10, 10, 11, 8,  // gauche
+      12, 13, 14, 14, 15, 12, // droite
+      16, 17, 18, 18, 19, 16, // dessous
+      20, 21, 22, 22, 23, 20  // dessus
   };
 
   initMesh(cubeMesh, vertices, indices);
@@ -188,15 +188,15 @@ void Scene3D::init() {
         setupInstancedAttributes(gpu.vao);
 
         pieceModels[key] = gpu;
-        // std::cout << "Successfully loaded: " << path << " (" <<
-        // data.vertexCount << " vertices)" << std::endl;
+        // std::cout << "Charge avec succes : " << path << " (" <<
+        // data.vertexCount << " sommets)" << std::endl;
       } else {
         std::cerr << "Failed to load model: " << path << std::endl;
       }
     }
   }
 
-  // Load asteroid model
+  // Charge le modele d'asteroide
   auto asteroidData = loadOBJ("../../assets/3Dmodels/Rocky_Asteroid_4.obj");
   if (asteroidData && asteroidData->vertexCount > 0) {
     asteroidModel.vertexCount = asteroidData->vertexCount;
@@ -532,11 +532,11 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
                        static_cast<GLsizei>(batch.second.size()));
   }
 
-  // Render meteorite if active
+  // Affiche la meteorite si active
   if (game.hasMeteoriteEvent() && asteroidModel.vertexCount > 0) {
     const double current_time = glfwGetTime();
     const double time_since_event = current_time - game.getMeteoriteStartTime();
-    const double meteorite_duration = 3.0; // seconds to fall
+    const double meteorite_duration = 3.0; // secondes de chute
 
     if (time_since_event < meteorite_duration) {
       const std::optional<coords> meteor_pos = game.getMeteoritePosition();
@@ -560,7 +560,7 @@ Scene3D::renderToTexture(const Camera &camera, int width, int height,
         std::vector<InstanceData> meteorInstances;
         InstanceData meteorInstance;
         meteorInstance.model = meteorModel;
-        meteorInstance.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Black
+        meteorInstance.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); // Noir
         meteorInstances.push_back(meteorInstance);
 
         uploadInstances(meteorInstances);

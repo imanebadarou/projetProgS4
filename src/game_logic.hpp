@@ -15,13 +15,13 @@ class GameLogic {
 public:
   GameLogic();
 
-  // Execute a move and update game state
+  // Execute un coup et met a jour l'etat de la partie
   bool makeMove(coords from, coords to);
 
-  // Get piece name from a piece pointer
+  // Recupere le nom de la piece a partir d'un pointeur de piece
   static std::string getPieceName(Piece const *piece);
 
-  // Getters
+  // Accesseurs
   bool isGameOver() const { return winner != 0; }
   int getWinner() const { return winner; }
   Color getCurrentTurn() const { return current_turn; }
@@ -40,7 +40,7 @@ public:
   double getMeteoriteStartTime() const { return meteor_start_time; }
   void updateMeteoriteEvents();
 
-  // Setters
+  // Mutateurs
   void setCurrentTurn(Color color) { current_turn = color; }
   void setGameMode(GameMode mode);
   void resetGame();
@@ -48,7 +48,7 @@ public:
 private:
   Board board;
   Color current_turn;
-  int winner; // 0 = playing, 1 = white wins, 2 = black wins
+  int winner; // 0 = en cours, 1 = victoire des blancs, 2 = victoire des noirs
   RandomManager random_manager;
   ContinuousUniformDistribution move_speed_distribution;
   GeometricPromotionDistribution geometric_promotion_distribution;

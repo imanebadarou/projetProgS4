@@ -5,17 +5,17 @@
 std::array<int, 8> RandomPermutationDistribution::sampleBackRankPermutation(
     RandomManager const &random_manager) const {
   std::array<int, 8> permutation = {
-      0, // rook
-      1, // knight
-      2, // bishop
-      3, // queen
-      4, // king
-      2, // bishop
-      1, // knight
-      0  // rook
+      0, // tour
+      1, // cavalier
+      2, // fou
+      3, // reine
+      4, // roi
+      2, // fou
+      1, // cavalier
+      0  // tour
   };
 
-  // Fisher-Yates shuffle: for i from n-1 to 1, swap(i, random[0..i]).
+  // Melange de Fisher-Yates : pour i de n-1 a 1, echanger(i, random[0..i]).
   for (int i = 7; i > 0; --i) {
     size_t j = static_cast<size_t>(random_manager.generateUniform() * (i + 1));
     if (j > static_cast<size_t>(i)) {

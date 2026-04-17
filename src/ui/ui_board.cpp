@@ -1,5 +1,5 @@
-#include "ui_board.hpp"
-#include <GLFW/glfw3.h> // For button constants
+#include "ui/ui_board.hpp"
+#include <GLFW/glfw3.h> // Pour les constantes de boutons
 #include <chrono>
 #include <cstdint>
 #include <imgui.h>
@@ -62,7 +62,7 @@ void UIBoard::emitRaycastLocal(float local_x, float local_y, float width,
   if (width <= 0 || height <= 0)
     return;
 
-  // Normalised Device Coordinates
+  // Coordonnees de peripherique normalisees
   float x = (2.0f * local_x) / width - 1.0f;
   float y = 1.0f - (2.0f * local_y) / height;
 
@@ -79,7 +79,7 @@ void UIBoard::emitRaycastLocal(float local_x, float local_y, float width,
 
   glm::vec3 cam_pos = camera.getPosition();
 
-  // Intersection with y=0 plane
+  // Intersection avec le plan y=0
   if (std::abs(ray_wor.y) > 0.001f) {
     float t = -cam_pos.y / ray_wor.y;
     if (t > 0) {
@@ -97,7 +97,7 @@ void UIBoard::emitRaycastLocal(float local_x, float local_y, float width,
 
 void UIBoard::render() {
 
-  // Draw 3D scene inside an ImGui Window
+  // Dessine la scène 3D dans une fenêtre ImGui
   if (show_3d) {
     ImGui::Begin("Vue 3D", &show_3d);
     ImVec2 avail = ImGui::GetContentRegionAvail();
@@ -151,7 +151,7 @@ void UIBoard::render() {
     ImGui::End();
   }
 
-  // Main UI Status / Settings Overlay
+  // Affichage de l'overlay d'état et de paramètres de l'interface utilisateur
   ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
   ImGui::Begin("Chess View Options", nullptr,
                ImGuiWindowFlags_AlwaysAutoResize);
@@ -191,7 +191,7 @@ void UIBoard::render() {
   }
   ImGui::End();
 
-  // Show the 2D UI Board if enabled
+  // Montre l'interface utilisateur 2D si activée
   if (show_2d) {
     ImGui::Begin("Chess Board 2D", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     drawBoardGrid();
@@ -417,7 +417,7 @@ void UIBoard::drawPromotionModal() {
 }
 
 void UIBoard::drawSurprisePromotionNotification() {
-  // Check if a promotion just occurred
+  // Verifie si une promotion a eu lieu
   if (!game.hasRandomPromotionOccurred()) {
     return;
   }
@@ -429,12 +429,12 @@ void UIBoard::drawSurprisePromotionNotification() {
   const double time_since_promotion =
       current_time - game.getLastPromotionTime();
 
-  // Display notification for 5 seconds
+  // Affiche la notification pendant 5 secondes
   if (time_since_promotion > 5.0) {
     return;
   }
 
-  // Fade out effect: gradually decrease opacity in the last 2 seconds
+  // Effet fade out
   float alpha = 1.0f;
   if (time_since_promotion > 3.0) {
     alpha = 1.0f - static_cast<float>((time_since_promotion - 3.0) / 2.0);

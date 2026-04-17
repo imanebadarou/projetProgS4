@@ -1,9 +1,9 @@
 #pragma once
 
-#include "camera.hpp"
 #include "game_logic.hpp"
-#include "scene_3d.hpp"
-#include "texture_manager.hpp"
+#include "rendering/camera.hpp"
+#include "rendering/scene_3d.hpp"
+#include "rendering/texture_manager.hpp"
 #include <array>
 #include <optional>
 #include <vector>
@@ -13,7 +13,7 @@ public:
   UIBoard(GameLogic &game, TextureManager &textures);
 
   void init3D();
-  void render(); // Renders Both 3D & UI
+  void render();
   void handleSquareClick(coords position, bool isRightClick);
 
   void updateWindowSize(int w, int h) {}

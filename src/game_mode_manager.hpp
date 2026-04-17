@@ -2,12 +2,6 @@
 
 #include "game_mode.hpp"
 
-/**
- * @brief Gestionnaire central pour le mode de jeu actif
- *
- * Permet de sélectionner le mode de jeu et d'y accéder depuis
- * n'importe quel point du code sans passer de paramètres.
- */
 class GameModeManager {
 public:
   static GameModeManager &getInstance() {

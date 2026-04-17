@@ -1,11 +1,10 @@
 #include "game_logic.hpp"
-#include "mode_selector.hpp"
 #include "quick_imgui/quick_imgui.hpp"
 #include "random/policies/starting_player_policy.hpp"
 #include "random/random_manager.hpp"
-#include "texture_manager.hpp"
-#include "ui_board.hpp"
-
+#include "rendering/texture_manager.hpp"
+#include "ui/mode_selector.hpp"
+#include "ui/ui_board.hpp"
 
 int main() {
   GameLogic game;

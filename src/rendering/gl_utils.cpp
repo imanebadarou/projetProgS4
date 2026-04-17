@@ -1,4 +1,4 @@
-#include "gl_utils.hpp"
+#include "rendering/gl_utils.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
